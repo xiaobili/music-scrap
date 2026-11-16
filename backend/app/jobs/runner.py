@@ -151,12 +151,7 @@ class JobRunner:
             }
         if kind == "match":
             album_id = int(payload.get("album_id", 0))
-            rows = await match_album(
-                session,
-                album_id,
-                self.client,
-                manual_query=payload.get("manual_query"),
-            )
+            rows = await match_album(session, album_id, self.client)
             return {"candidates": len(rows)}
         if kind == "apply":
             plan_id = int(payload.get("plan_id", 0))

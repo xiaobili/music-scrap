@@ -59,6 +59,7 @@ def score_release(
     year: int | None,
     local_tracks: list[Track],
     acoustid_groups: set[str] | None = None,
+    year_range: tuple[int, int] | None = None,
 ) -> tuple[float, dict[str, Any]]:
     title_score = similarity(album_title, release.title)
     artist_score = similarity(album_artist, release.artist)
@@ -78,7 +79,12 @@ def score_release(
     else:
         duration_score = 0.5
 
-    if year and release.year:
+    if year_range is not None:
+        low, high = year_range
+        year_score = (
+            1.0 if release.year is not None and low <= release.year <= high else 0.0
+        )
+    elif year and release.year:
         delta = abs(year - release.year)
         year_score = 1.0 if delta == 0 else (0.5 if delta <= 1 else 0.0)
     else:
@@ -129,7 +135,7 @@ async def match_album(
     album_id: int,
     client: httpx.AsyncClient,
     *,
-    manual_query: str | None = None,
+    search: ReleaseQuery | None = None,
 ) -> list[MatchCandidate]:
     album = session.get(Album, album_id)
     if album is None:
@@ -145,9 +151,7 @@ async def match_album(
     if not active:
         return []
 
-    query = _query_from_album(album)
-    if manual_query:
-        query = ReleaseQuery(album=manual_query, artist=None, year=None)
+    query = search or _query_from_album(album)
 
     groups: set[str] = set()
     if album.kind == "split":
@@ -172,15 +176,30 @@ async def match_album(
     for release in collected:
         deduped[(release.provider, release.provider_id)] = release
 
+    year_range: tuple[int, int] | None = None
+    if search is not None and (search.year is not None or search.year_to is not None):
+        year_range = (search.year or 0, search.year_to or 9999)
+        deduped = {
+            key: release
+            for key, release in deduped.items()
+            if release.year is not None
+            and year_range[0] <= release.year <= year_range[1]
+        }
+
+    score_title = query.album or album.album
+    score_artist = query.artist or album.artist
+    score_year = None if year_range is not None else (query.year or album.year)
+
     scored: list[tuple[float, dict[str, Any], CanonicalRelease]] = []
     for release in deduped.values():
         score, parts = score_release(
             release,
-            album.album,
-            album.artist,
-            album.year,
+            score_title,
+            score_artist,
+            score_year,
             tracks,
             groups,
+            year_range=year_range,
         )
         scored.append((score, parts, release))
     scored.sort(key=lambda item: item[0], reverse=True)

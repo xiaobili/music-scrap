@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from ..db.models import Album, ChangePlan, MatchCandidate
 from ..jobs.runner import get_runner
+from ..providers.base import ReleaseQuery
 from ..schemas import AlbumSearchRequest, CoverSelectRequest, SelectCandidateRequest
 from ..services.cover import CoverError, process_cover
 from ..services.match import get_cover_candidates, match_album
@@ -120,7 +121,13 @@ async def search_album(
     album = session.get(Album, album_id)
     if album is None:
         raise HTTPException(status_code=404, detail="album not found")
-    rows = await match_album(session, album.id, client, manual_query=payload.query)
+    search = ReleaseQuery(
+        album=payload.album,
+        artist=payload.artist,
+        year=payload.year_from,
+        year_to=payload.year_to,
+    )
+    rows = await match_album(session, album.id, client, search=search)
     return [serialize_candidate(row) for row in rows]
 
 

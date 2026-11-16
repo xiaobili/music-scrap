@@ -18,7 +18,9 @@ const candidates = ref<Candidate[]>([])
 const loading = ref(true)
 const searching = ref(false)
 const selectingId = ref<number | null>(null)
-const manualQuery = ref('')
+const searchAlbum = ref('')
+const searchArtist = ref('')
+const searchYear = ref('')
 const planId = ref<number | null>(null)
 const coverOpen = ref(false)
 const covers = ref<{ provider: string; url: string; width?: number; height?: number }[]>([])
@@ -61,11 +63,43 @@ async function load() {
   }
 }
 
+const searchReady = computed(
+  () =>
+    Boolean(searchAlbum.value.trim()) ||
+    Boolean(searchArtist.value.trim()) ||
+    Boolean(searchYear.value.trim()),
+)
+
+function parseYearRange(text: string) {
+  const value = text.trim()
+  if (!value) return {}
+  if (/^\d{4}$/.test(value)) {
+    const year = Number(value)
+    return { year_from: year, year_to: year }
+  }
+  const range = /^(\d{4})\s*-\s*(\d{4})$/.exec(value)
+  if (!range) return null
+  const from = Number(range[1])
+  const to = Number(range[2])
+  if (from > to) return null
+  return { year_from: from, year_to: to }
+}
+
 async function search() {
-  if (!manualQuery.value.trim()) return
+  const years = parseYearRange(searchYear.value)
+  if (years === null) {
+    toast.push('年代格式应为 1990 或 1990-1999', 'error')
+    return
+  }
+  const criteria = {
+    ...(searchAlbum.value.trim() ? { album: searchAlbum.value.trim() } : {}),
+    ...(searchArtist.value.trim() ? { artist: searchArtist.value.trim() } : {}),
+    ...years,
+  }
+  if (!Object.keys(criteria).length) return
   searching.value = true
   try {
-    candidates.value = await api.albums.search(albumId.value, manualQuery.value.trim())
+    candidates.value = await api.albums.search(albumId.value, criteria)
     toast.push(`检索到 ${candidates.value.length} 个候选`)
   } catch (error) {
     toast.push((error as Error).message, 'error')
@@ -201,16 +235,28 @@ onMounted(load)
                 按置信度排序 · {{ candidates.length }} 个候选
               </p>
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
               <input
-                v-model="manualQuery"
-                placeholder="手动关键词"
-                class="w-44 border border-line bg-transparent px-3 py-2 font-mono text-[10px] placeholder:text-ink/30 focus:border-ink focus:outline-none"
+                v-model="searchAlbum"
+                placeholder="专辑名"
+                class="w-36 border border-line bg-transparent px-3 py-2 font-mono text-[10px] placeholder:text-ink/30 focus:border-ink focus:outline-none"
+                @keyup.enter="search"
+              />
+              <input
+                v-model="searchArtist"
+                placeholder="歌手名"
+                class="w-32 border border-line bg-transparent px-3 py-2 font-mono text-[10px] placeholder:text-ink/30 focus:border-ink focus:outline-none"
+                @keyup.enter="search"
+              />
+              <input
+                v-model="searchYear"
+                placeholder="年代 1990-1999"
+                class="w-36 border border-line bg-transparent px-3 py-2 font-mono text-[10px] placeholder:text-ink/30 focus:border-ink focus:outline-none"
                 @keyup.enter="search"
               />
               <button
                 class="stamp py-2 transition hover:bg-ink hover:text-paper disabled:opacity-40"
-                :disabled="searching || !manualQuery.trim()"
+                :disabled="searching || !searchReady"
                 @click="search"
               >
                 {{ searching ? '检索中…' : '重新检索' }}

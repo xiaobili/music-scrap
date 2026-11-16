@@ -55,7 +55,9 @@ class MusicBrainzProvider(Provider):
             parts.append(f'release:"{query.album}"')
         if query.artist:
             parts.append(f'artist:"{query.artist}"')
-        if query.year:
+        if query.year and query.year_to and query.year != query.year_to:
+            parts.append(f"date:[{query.year} TO {query.year_to}]")
+        elif query.year:
             parts.append(f"date:{query.year}")
         text = " AND ".join(parts) or query.album or ""
         if not text:

@@ -85,10 +85,13 @@ export const api = {
       ),
     detail: (id: number) => request<Album>(`/albums/${id}`),
     candidates: (id: number) => request<Candidate[]>(`/albums/${id}/candidates`),
-    search: (id: number, text: string) =>
+    search: (
+      id: number,
+      criteria: { album?: string; artist?: string; year_from?: number; year_to?: number },
+    ) =>
       request<Candidate[]>(`/albums/${id}/search`, {
         method: 'POST',
-        body: JSON.stringify({ query: text }),
+        body: JSON.stringify(criteria),
       }),
     select: (id: number, candidateId: number, policy?: string) =>
       request<Plan>(`/albums/${id}/select`, {

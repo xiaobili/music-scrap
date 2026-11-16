@@ -163,6 +163,55 @@ async def test_rematch_does_not_downgrade_planned_album(db, tmp_path, monkeypatc
     assert album.status == "matched"
 
 
+@pytest.mark.asyncio
+async def test_manual_search_filters_year_range(db, tmp_path, monkeypatch):
+    album, _, _, _ = _setup(db, tmp_path)
+
+    def fake_release(provider_id: str, year: int | None) -> CanonicalRelease:
+        return CanonicalRelease(
+            provider="musicbrainz",
+            provider_id=provider_id,
+            title="城市天气",
+            artist="甜梅号",
+            year=year,
+            tracks=[CanonicalTrack(position=1, title="城市天气", duration_ms=3000)],
+        )
+
+    class FakeProvider:
+        name = "musicbrainz"
+
+        async def search_release(self, query):
+            return [
+                fake_release("in-range", 1995),
+                fake_release("out-of-range", 2005),
+                fake_release("unknown-year", None),
+            ]
+
+    class FakeRegistry:
+        def __init__(self, ctx):
+            pass
+
+        async def enabled(self):
+            return [FakeProvider()]
+
+    import app.services.match as match_module
+    from app.providers.base import ReleaseQuery
+
+    monkeypatch.setattr(match_module, "ProviderRegistry", FakeRegistry)
+
+    client = httpx.AsyncClient()
+    rows = await match_module.match_album(
+        db,
+        album.id,
+        client,
+        search=ReleaseQuery(album="城市天气", artist="甜梅号", year=1990, year_to=1999),
+    )
+    await client.aclose()
+
+    assert [row.provider_id for row in rows] == ["in-range"]
+    assert rows[0].raw_score_json["year"]["value"] == 1.0
+
+
 def test_whole_album_only_album_fields(db, tmp_path):
     album, candidate, _, _ = _setup(db, tmp_path, kind="whole")
     plan = build_plan(db, album.id, candidate.id, "fill_only")

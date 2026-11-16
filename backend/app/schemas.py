@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class RootCreate(BaseModel):
@@ -14,7 +14,26 @@ class RootPatch(BaseModel):
 
 
 class AlbumSearchRequest(BaseModel):
-    query: str = Field(min_length=1, max_length=256)
+    album: str | None = Field(default=None, max_length=256)
+    artist: str | None = Field(default=None, max_length=256)
+    year_from: int | None = Field(default=None, ge=1900, le=2100)
+    year_to: int | None = Field(default=None, ge=1900, le=2100)
+
+    @model_validator(mode="after")
+    def _validate_criteria(self) -> "AlbumSearchRequest":
+        if self.album is not None:
+            self.album = self.album.strip() or None
+        if self.artist is not None:
+            self.artist = self.artist.strip() or None
+        if not any((self.album, self.artist, self.year_from, self.year_to)):
+            raise ValueError("至少需要填写一个检索条件")
+        if (
+            self.year_from is not None
+            and self.year_to is not None
+            and self.year_from > self.year_to
+        ):
+            raise ValueError("年代起始不能晚于结束")
+        return self
 
 
 class SelectCandidateRequest(BaseModel):

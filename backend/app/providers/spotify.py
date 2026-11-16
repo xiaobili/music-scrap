@@ -37,11 +37,14 @@ class SpotifyProvider(Provider):
         return bool(self.ctx.store.get("spotify.enabled", True))
 
     async def search_release(self, query: ReleaseQuery) -> list[CanonicalRelease]:
-        if not await self.is_enabled() or not query.album:
+        if not await self.is_enabled() or not (query.album or query.artist):
             return []
-        text = f'album:"{query.album}"'
+        parts: list[str] = []
+        if query.album:
+            parts.append(f'album:"{query.album}"')
         if query.artist:
-            text += f' artist:"{query.artist}"'
+            parts.append(f'artist:"{query.artist}"')
+        text = " ".join(parts)
         payload = await cached(
             self.ctx.session,
             self.name,

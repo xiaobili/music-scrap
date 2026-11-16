@@ -62,6 +62,7 @@ class ReleaseQuery(BaseModel):
     album: str | None = None
     artist: str | None = None
     year: int | None = None
+    year_to: int | None = None
     track_count: int | None = None
     mbid: str | None = None
 
