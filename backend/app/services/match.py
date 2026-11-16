@@ -14,12 +14,14 @@ from ..db.models import Album, ChangePlan, MatchCandidate, Track
 from ..providers.acoustid import AcoustIDProvider
 from ..providers.base import (
     CanonicalRelease,
+    Provider,
     ProviderContext,
     ProviderError,
     ReleaseQuery,
 )
 from ..providers.registry import ProviderRegistry
 from ..services.settings import SettingsStore
+from .text import field_variants, has_cjk, to_simplified
 
 WEIGHTS = {
     "title": 0.35,
@@ -37,8 +39,10 @@ def similarity(left: str | None, right: str | None) -> float:
     b = right.strip().lower()
     if not a or not b:
         return 0.0
-    if any("\u4e00" <= char <= "\u9fff" for char in a + b):
-        return fuzz.ratio(a, b) / 100.0
+    if has_cjk(a + b):
+        raw = fuzz.ratio(a, b) / 100.0
+        normalized = fuzz.ratio(to_simplified(a), to_simplified(b)) / 100.0
+        return max(raw, normalized)
     return fuzz.token_set_ratio(a, b) / 100.0
 
 
@@ -117,6 +121,34 @@ def _query_from_album(album: Album) -> ReleaseQuery:
     )
 
 
+def _query_variants(query: ReleaseQuery) -> list[ReleaseQuery]:
+    return [
+        query.model_copy(update={"album": album, "artist": artist})
+        for album, artist in field_variants(query.album, query.artist)
+    ]
+
+
+async def _search_releases(
+    providers: list[Provider], queries: list[ReleaseQuery]
+) -> list[CanonicalRelease]:
+    if not queries:
+        return []
+    results = await asyncio.gather(
+        *[
+            provider.search_release(query)
+            for provider in providers
+            for query in queries
+        ],
+        return_exceptions=True,
+    )
+    collected: list[CanonicalRelease] = []
+    for result in results:
+        if isinstance(result, Exception):
+            continue
+        collected.extend(result)
+    return collected
+
+
 async def _acoustid_groups(
     session: Session, client: httpx.AsyncClient, tracks: list[Track]
 ) -> set[str]:
@@ -157,20 +189,17 @@ async def match_album(
     if album.kind == "split":
         groups = await _acoustid_groups(session, client, tracks)
 
-    results = await asyncio.gather(
-        *[
-            provider.search_release(query)
-            for provider in active
-            if provider.name != "acoustid"
-        ],
-        return_exceptions=True,
-    )
-
-    collected: list[CanonicalRelease] = []
-    for result in results:
-        if isinstance(result, Exception):
-            continue
-        collected.extend(result)
+    searchable = [provider for provider in active if provider.name != "acoustid"]
+    queries = _query_variants(query)
+    # 外部曲库对台版/港版发行常收录繁体标题。手动检索同时覆盖简繁变体；
+    # 自动匹配仅在原始查询零结果时回退变体，避免批量匹配请求量翻倍。
+    if search is None:
+        primary, fallback = queries[:1], queries[1:]
+    else:
+        primary, fallback = queries, []
+    collected = await _search_releases(searchable, primary)
+    if not collected and fallback:
+        collected = await _search_releases(searchable, fallback)
 
     deduped: dict[tuple[str, str], CanonicalRelease] = {}
     for release in collected:

@@ -53,7 +53,8 @@ def test_duration_penalty():
 
 
 def test_manual_similarity_for_chinese():
-    assert similarity("城市天气", "城市天氣") > 0.5
+    assert similarity("城市天气", "城市天氣") == pytest.approx(1.0)
+    assert similarity("叶惠美", "葉惠美") == pytest.approx(1.0)
     assert similarity(None, "x") == 0.0
 
 
