@@ -186,3 +186,19 @@ def test_select_plan_apply_and_rollback(client, library):
     assert rollback_job["status"] == "succeeded", rollback_job
     tags = tagio.read(first)
     assert "LABEL" not in tags
+
+
+def test_select_plan_uses_saved_field_policy(client, library):
+    _create_root_and_scan(client, library)
+    album = client.get("/api/albums").json()["items"][0]
+    candidate_id = _seed_candidate(album["id"])
+    updated = client.put("/api/settings", json={"values": {"field_policy": "overwrite"}})
+    assert updated.status_code == 200
+
+    selected = client.post(
+        f"/api/albums/{album['id']}/select",
+        json={"candidate_id": candidate_id},
+    )
+
+    assert selected.status_code == 200, selected.text
+    assert selected.json()["policy"] == "overwrite"

@@ -19,7 +19,7 @@ class AlbumSearchRequest(BaseModel):
 
 class SelectCandidateRequest(BaseModel):
     candidate_id: int
-    policy: str = "fill_only"
+    policy: str | None = None
 
 
 class PlanItemUpdate(BaseModel):

@@ -9,6 +9,7 @@ from app import tagio
 from app.db.models import Album, ChangePlan, LibraryRoot, MatchCandidate, Track
 from app.providers.base import CanonicalRelease, CanonicalTrack, CoverCandidate
 from app.services.plan import build_plan, patch_items
+from app.services.settings import SettingsStore
 
 from .conftest import make_audio
 
@@ -90,6 +91,21 @@ def test_overwrite_includes_existing(db, tmp_path):
     assert ("album", "ALBUM") not in fields
     assert ("album", "ALBUMARTIST") in fields
     assert ("track", "TITLE") in fields
+
+
+def test_default_policy_uses_saved_field_policy(db, tmp_path):
+    album, candidate, track1, _ = _setup(db, tmp_path)
+    SettingsStore(db).set("field_policy", "overwrite")
+
+    plan = build_plan(db, album.id, candidate.id)
+
+    assert plan.policy == "overwrite"
+    title_items = [
+        item
+        for item in plan.items
+        if item.target_type == "track" and item.target_id == track1.id and item.field == "TITLE"
+    ]
+    assert title_items and title_items[0].old_value == "旧标题"
 
 
 def test_whole_album_only_album_fields(db, tmp_path):

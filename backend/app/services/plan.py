@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from .. import tagio
 from ..db.models import Album, ChangeItem, ChangePlan, MatchCandidate, Track
 from ..providers.base import CanonicalRelease
+from .settings import SettingsStore
 
 ALBUM_TARGET = "album"
 TRACK_TARGET = "track"
@@ -86,7 +87,7 @@ def build_plan(
     session: Session,
     album_id: int,
     candidate_id: int,
-    policy: str = "fill_only",
+    policy: str | None = None,
 ) -> ChangePlan:
     album = session.get(Album, album_id)
     candidate = session.get(MatchCandidate, candidate_id)
@@ -94,6 +95,9 @@ def build_plan(
         raise ValueError("album or candidate not found")
     if candidate.album_id != album.id:
         raise ValueError("candidate does not belong to album")
+
+    if policy is None:
+        policy = str(SettingsStore(session).get("field_policy") or "fill_only")
 
     release = CanonicalRelease.model_validate(candidate.payload_json)
     tracks = list(

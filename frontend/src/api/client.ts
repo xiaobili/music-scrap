@@ -90,10 +90,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ query: text }),
       }),
-    select: (id: number, candidateId: number, policy = 'fill_only') =>
+    select: (id: number, candidateId: number, policy?: string) =>
       request<Plan>(`/albums/${id}/select`, {
         method: 'POST',
-        body: JSON.stringify({ candidate_id: candidateId, policy }),
+        body: JSON.stringify({ candidate_id: candidateId, ...(policy ? { policy } : {}) }),
       }),
     covers: (id: number, candidateId: number) =>
       request<{ provider: string; url: string; width?: number; height?: number }[]>(
