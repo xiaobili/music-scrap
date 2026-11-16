@@ -87,6 +87,20 @@ async def test_apply_writes_tags_and_backups(settings, db, tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_apply_marks_album_matched(settings, db, tmp_path):
+    album, plan, first, second = _setup_album(db, tmp_path)
+    album.status = "unmatched"
+    db.commit()
+
+    client = httpx.AsyncClient()
+    await apply_plan(db, plan.id, client)
+    await client.aclose()
+
+    db.refresh(album)
+    assert album.status == "matched"
+
+
+@pytest.mark.asyncio
 async def test_rollback_restores_tags(settings, db, tmp_path):
     album, plan, first, second = _setup_album(db, tmp_path)
     client = httpx.AsyncClient()

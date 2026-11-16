@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app import tagio
-from app.db.models import Album, MatchCandidate
+from app.db.models import Album, ChangePlan, LibraryRoot, MatchCandidate
 from app.db.session import get_session_factory
 from app.main import app
 from app.providers.base import CanonicalRelease, CanonicalTrack
@@ -202,3 +202,27 @@ def test_select_plan_uses_saved_field_policy(client, library):
 
     assert selected.status_code == 200, selected.text
     assert selected.json()["policy"] == "overwrite"
+
+
+def test_init_db_repairs_album_status(tmp_path):
+    from app.db.session import get_session_factory, init_db
+
+    db_path = tmp_path / "repair.db"
+    init_db(db_path)
+    with get_session_factory()() as session:
+        root = LibraryRoot(path=str(tmp_path / "library"))
+        session.add(root)
+        session.commit()
+        album = Album(root_id=root.id, rel_path="A/Album", status="unmatched")
+        session.add(album)
+        session.commit()
+        session.add(ChangePlan(album_id=album.id, status="applied"))
+        session.commit()
+        album_id = album.id
+
+    init_db(db_path)
+
+    with get_session_factory()() as session:
+        repaired = session.get(Album, album_id)
+        assert repaired is not None
+        assert repaired.status == "matched"

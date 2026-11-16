@@ -70,6 +70,9 @@ async def apply_plan(
     if album is None:
         raise ValueError("album not found")
 
+    # 有可执行的变更计划说明已完成人工匹配，写入时兜底修正历史遗留状态
+    album.status = "matched"
+
     tracks = list(
         session.scalars(
             select(Track).where(Track.album_id == album.id).order_by(Track.disc_no, Track.track_no)

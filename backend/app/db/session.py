@@ -3,11 +3,12 @@ from __future__ import annotations
 from collections.abc import Iterator
 from pathlib import Path
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Engine, create_engine, event, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from ..core.config import get_settings
 from .base import Base
+from .models import Album, ChangePlan
 
 _engine: Engine | None = None
 _session_factory: sessionmaker[Session] | None = None
@@ -51,9 +52,24 @@ def get_session_factory() -> sessionmaker[Session]:
     return _session_factory
 
 
+def _repair_album_status(engine: Engine) -> None:
+    """修复历史数据：已生成变更计划的专辑说明已完成人工匹配，状态归位为 matched。"""
+    with Session(engine) as session:
+        session.execute(
+            update(Album)
+            .where(
+                Album.status != "matched",
+                Album.id.in_(select(ChangePlan.album_id)),
+            )
+            .values(status="matched")
+        )
+        session.commit()
+
+
 def init_db(db_path: Path | str | None = None) -> None:
     engine = init_engine(db_path)
     Base.metadata.create_all(engine)
+    _repair_album_status(engine)
 
 
 def get_session() -> Iterator[Session]:

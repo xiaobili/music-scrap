@@ -10,7 +10,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from ..core.config import get_settings
-from ..db.models import Album, MatchCandidate, Track
+from ..db.models import Album, ChangePlan, MatchCandidate, Track
 from ..providers.acoustid import AcoustIDProvider
 from ..providers.base import (
     CanonicalRelease,
@@ -202,7 +202,14 @@ async def match_album(
 
     best = scored[0][0] if scored else 0.0
     album.confidence = best
-    if best >= 0.85:
+    # 已有人工选定的变更计划说明匹配已完成，自动重新检索不得把状态降级
+    has_plan = (
+        session.scalar(
+            select(ChangePlan.id).where(ChangePlan.album_id == album.id).limit(1)
+        )
+        is not None
+    )
+    if has_plan or best >= 0.85:
         album.status = "matched"
     elif best >= 0.60:
         album.status = "pending"

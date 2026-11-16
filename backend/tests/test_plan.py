@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import httpx
 import pytest
 from sqlalchemy import select
 
@@ -106,6 +107,60 @@ def test_default_policy_uses_saved_field_policy(db, tmp_path):
         if item.target_type == "track" and item.target_id == track1.id and item.field == "TITLE"
     ]
     assert title_items and title_items[0].old_value == "旧标题"
+
+
+def test_manual_selection_marks_album_matched(db, tmp_path):
+    album, candidate, _, _ = _setup(db, tmp_path)
+    album.status = "unmatched"
+    db.commit()
+
+    build_plan(db, album.id, candidate.id)
+
+    db.refresh(album)
+    assert album.status == "matched"
+
+
+@pytest.mark.asyncio
+async def test_rematch_does_not_downgrade_planned_album(db, tmp_path, monkeypatch):
+    album, candidate, _, _ = _setup(db, tmp_path)
+    build_plan(db, album.id, candidate.id)
+    album.status = "matched"
+    db.commit()
+
+    class FakeProvider:
+        name = "musicbrainz"
+
+        async def search_release(self, query):
+            return [
+                CanonicalRelease(
+                    provider="musicbrainz",
+                    provider_id="other",
+                    title="完全无关的专辑",
+                    artist="另一个人",
+                    year=1999,
+                    tracks=[CanonicalTrack(position=1, title="x", duration_ms=1000)],
+                )
+            ]
+
+    class FakeRegistry:
+        def __init__(self, ctx):
+            pass
+
+        async def enabled(self):
+            return [FakeProvider()]
+
+    import app.services.match as match_module
+
+    monkeypatch.setattr(match_module, "ProviderRegistry", FakeRegistry)
+
+    client = httpx.AsyncClient()
+    rows = await match_module.match_album(db, album.id, client)
+    await client.aclose()
+
+    db.refresh(album)
+    assert rows
+    assert album.confidence < 0.6
+    assert album.status == "matched"
 
 
 def test_whole_album_only_album_fields(db, tmp_path):

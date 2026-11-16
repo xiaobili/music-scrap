@@ -96,6 +96,9 @@ def build_plan(
     if candidate.album_id != album.id:
         raise ValueError("candidate does not belong to album")
 
+    # 人工选定候选即视为匹配完成，避免低置信度专辑写入后仍停留在 unmatched
+    album.status = "matched"
+
     if policy is None:
         policy = str(SettingsStore(session).get("field_policy") or "fill_only")
 
