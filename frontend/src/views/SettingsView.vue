@@ -29,8 +29,6 @@ const enabled = reactive<Record<string, boolean>>({})
 const credLabels: Record<string, string> = {
   'acoustid.apikey': 'API Key',
   'discogs.token': 'Token',
-  'spotify.client_id': 'Client ID',
-  'spotify.client_secret': 'Client Secret',
   'netease.cookie': 'Cookie',
   'qq.cookie': 'Cookie',
 }

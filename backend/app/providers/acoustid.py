@@ -30,6 +30,8 @@ class AcoustIDProvider(Provider):
     rate = 3.0
 
     async def is_enabled(self) -> bool:
+        if not self.ctx.store.get("acoustid.enabled", True):
+            return False
         return bool(self.ctx.store.get("acoustid.apikey"))
 
     async def lookup(self, path: str) -> list[dict[str, Any]]:

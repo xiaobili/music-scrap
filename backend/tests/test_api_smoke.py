@@ -111,6 +111,50 @@ def test_settings_masks_secrets(client):
     assert provider["configured"] is True
 
 
+def test_settings_persists_disabled_providers(client):
+    updated = client.put(
+        "/api/settings",
+        json={
+            "values": {
+                "acoustid.apikey": "acoustid-key",
+                "discogs.token": "discogs-token",
+                "acoustid.enabled": False,
+                "discogs.enabled": False,
+            }
+        },
+    )
+
+    for payload in (updated.json(), client.get("/api/settings").json()):
+        providers = {provider["id"]: provider for provider in payload["providers"]}
+        assert providers["acoustid"]["configured"] is True
+        assert providers["acoustid"]["enabled"] is False
+        assert providers["discogs"]["configured"] is True
+        assert providers["discogs"]["enabled"] is False
+
+
+async def test_disabled_acoustid_and_discogs_are_not_enabled(db):
+    import httpx
+
+    from app.providers.acoustid import AcoustIDProvider
+    from app.providers.base import ProviderContext
+    from app.providers.discogs import DiscogsProvider
+    from app.services.settings import SettingsStore
+
+    store = SettingsStore(db)
+    store.update(
+        {
+            "acoustid.apikey": "acoustid-key",
+            "discogs.token": "discogs-token",
+            "acoustid.enabled": False,
+            "discogs.enabled": False,
+        }
+    )
+    ctx = ProviderContext(db, httpx.AsyncClient(), store)
+
+    assert await AcoustIDProvider(ctx).is_enabled() is False
+    assert await DiscogsProvider(ctx).is_enabled() is False
+
+
 def test_rejects_root_that_is_a_file(client, library):
     file_path = library / "not-a-dir.txt"
     file_path.write_text("x")

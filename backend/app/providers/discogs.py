@@ -39,6 +39,8 @@ class DiscogsProvider(Provider):
         return str(self.ctx.store.get("discogs.token") or "")
 
     async def is_enabled(self) -> bool:
+        if not self.ctx.store.get("discogs.enabled", True):
+            return False
         return bool(self.token)
 
     def _headers(self) -> dict[str, str]:

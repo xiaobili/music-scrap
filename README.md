@@ -78,7 +78,7 @@ sudo chown -R 1000:1000 data backups
 | MusicBrainz + Cover Art Archive | 无需凭据；按 1 req/s 限流，User-Agent 需可联系 |
 | AcoustID | 设置 API Key 后启用；仅分轨做逐轨指纹投票 |
 | Discogs | 设置 Personal Access Token；60 req/min |
-| Spotify | 设置 Client ID / Secret（Client Credentials） |
+| Spotify | 无需凭据；基于 [SpotAPI](https://spotapi.readthedocs.io/en/latest/) 匿名接口，可能随 Spotify 改动失效 |
 | 网易云音乐 | 非官方接口，默认关闭；需 `ENABLE_UNOFFICIAL_PROVIDERS=true`，Cookie 可选 |
 | QQ 音乐 | 非官方接口，默认关闭；需 `ENABLE_UNOFFICIAL_PROVIDERS=true`，Cookie 可选 |
 

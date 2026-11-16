@@ -13,10 +13,11 @@ DEFAULTS: dict[str, Any] = {
     "cover_policy": "if_missing",
     "safe_mode": False,
     "musicbrainz.enabled": True,
+    "acoustid.enabled": True,
     "acoustid.apikey": "",
+    "discogs.enabled": True,
     "discogs.token": "",
-    "spotify.client_id": "",
-    "spotify.client_secret": "",
+    "spotify.enabled": True,
     "netease.enabled": False,
     "netease.cookie": "",
     "qq.enabled": False,
@@ -26,7 +27,6 @@ DEFAULTS: dict[str, Any] = {
 SECRET_KEYS = {
     "acoustid.apikey",
     "discogs.token",
-    "spotify.client_secret",
     "netease.cookie",
     "qq.cookie",
 }
@@ -56,9 +56,9 @@ PROVIDERS: list[dict[str, Any]] = [
     {
         "id": "spotify",
         "label": "Spotify",
-        "rate": "429 自动退避",
-        "credential_keys": ["spotify.client_id", "spotify.client_secret"],
-        "requires": ["spotify.client_id", "spotify.client_secret"],
+        "rate": "2 req/s",
+        "credential_keys": [],
+        "requires": [],
     },
     {
         "id": "netease",
