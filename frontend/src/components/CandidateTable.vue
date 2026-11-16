@@ -9,6 +9,7 @@ const badges: Record<string, string> = {
   discogs: 'DC',
   spotify: 'SP',
   netease: 'NE',
+  qq: 'QQ',
   acoustid: 'AC',
 }
 

@@ -5,6 +5,7 @@ from .base import Provider, ProviderContext
 from .discogs import DiscogsProvider
 from .musicbrainz import MusicBrainzProvider
 from .netease import NeteaseProvider
+from .qq import QQProvider
 from .spotify import SpotifyProvider
 
 PROVIDER_CLASSES = [
@@ -13,6 +14,7 @@ PROVIDER_CLASSES = [
     DiscogsProvider,
     SpotifyProvider,
     NeteaseProvider,
+    QQProvider,
 ]
 
 

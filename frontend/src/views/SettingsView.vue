@@ -32,6 +32,7 @@ const credLabels: Record<string, string> = {
   'spotify.client_id': 'Client ID',
   'spotify.client_secret': 'Client Secret',
   'netease.cookie': 'Cookie',
+  'qq.cookie': 'Cookie',
 }
 
 function hydrate(data: SettingsResponse) {
@@ -275,7 +276,7 @@ onMounted(load)
               v-for="provider in settings?.providers || []"
               :key="provider.id"
               class="p-4"
-              :class="provider.id === 'netease' && !provider.enabled ? 'bg-paper2/40' : ''"
+              :class="provider.unofficial && !provider.enabled ? 'bg-paper2/40' : ''"
             >
               <div class="flex flex-wrap items-center gap-3">
                 <span class="stamp w-12 justify-center text-ink/60">
@@ -310,10 +311,10 @@ onMounted(load)
               </div>
 
               <p
-                v-if="provider.id === 'netease'"
+                v-if="provider.unofficial"
                 class="mt-2 font-mono text-[9px] text-rust"
               >
-                非官方接口 · 默认关闭 · 需自备 Cookie
+                非官方接口 · 默认关闭 · Cookie 可选
               </p>
 
               <div

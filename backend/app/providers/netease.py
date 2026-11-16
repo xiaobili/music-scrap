@@ -67,12 +67,19 @@ class NeteaseProvider(Provider):
                 releases.append(parsed)
         return releases
 
+    def _headers(self) -> dict[str, str]:
+        headers = dict(NETEASE_HEADERS)
+        cookie = str(self.ctx.store.get("netease.cookie") or "").strip()
+        if cookie:
+            headers["Cookie"] = cookie
+        return headers
+
     async def _search(self, text: str) -> dict[str, Any]:
         await self.bucket.acquire()
         response = await self.ctx.client.get(
             "https://music.163.com/api/search/get/web",
             params={"s": text, "type": 10, "limit": 10},
-            headers=NETEASE_HEADERS,
+            headers=self._headers(),
         )
         if response.status_code != 200:
             raise ProviderError(f"NetEase HTTP {response.status_code}")
@@ -82,7 +89,7 @@ class NeteaseProvider(Provider):
         await self.bucket.acquire()
         response = await self.ctx.client.get(
             f"https://music.163.com/api/album/{album_id}",
-            headers=NETEASE_HEADERS,
+            headers=self._headers(),
         )
         if response.status_code != 200:
             raise ProviderError(f"NetEase HTTP {response.status_code}")

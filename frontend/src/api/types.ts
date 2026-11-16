@@ -124,6 +124,7 @@ export interface ProviderState {
   enabled: boolean
   configured: boolean
   enabled_by_user: boolean
+  unofficial: boolean
   masked: Record<string, string>
 }
 

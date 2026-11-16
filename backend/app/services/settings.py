@@ -19,6 +19,8 @@ DEFAULTS: dict[str, Any] = {
     "spotify.client_secret": "",
     "netease.enabled": False,
     "netease.cookie": "",
+    "qq.enabled": False,
+    "qq.cookie": "",
 }
 
 SECRET_KEYS = {
@@ -26,6 +28,7 @@ SECRET_KEYS = {
     "discogs.token",
     "spotify.client_secret",
     "netease.cookie",
+    "qq.cookie",
 }
 
 PROVIDERS: list[dict[str, Any]] = [
@@ -59,10 +62,19 @@ PROVIDERS: list[dict[str, Any]] = [
     },
     {
         "id": "netease",
-        "label": "网易云 / QQ 音乐",
+        "label": "网易云音乐",
         "rate": "0.5 req/s",
         "credential_keys": ["netease.cookie"],
         "requires": [],
+        "unofficial": True,
+    },
+    {
+        "id": "qq",
+        "label": "QQ 音乐",
+        "rate": "0.5 req/s",
+        "credential_keys": ["qq.cookie"],
+        "requires": [],
+        "unofficial": True,
     },
 ]
 
@@ -117,8 +129,10 @@ class SettingsStore:
         for provider in PROVIDERS:
             requires = provider["requires"]
             configured = all(bool(values.get(key)) for key in requires) if requires else True
-            if provider["id"] == "netease":
-                enabled = bool(values.get("netease.enabled")) and enable_unofficial
+            if provider.get("unofficial"):
+                enabled = (
+                    bool(values.get(f"{provider['id']}.enabled")) and enable_unofficial
+                )
             else:
                 enabled = bool(values.get(f"{provider['id']}.enabled", True))
             masked: dict[str, str] = {}
@@ -133,6 +147,7 @@ class SettingsStore:
                     "enabled": enabled and configured,
                     "configured": configured,
                     "enabled_by_user": enabled,
+                    "unofficial": bool(provider.get("unofficial", False)),
                     "masked": masked,
                 }
             )

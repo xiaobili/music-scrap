@@ -79,7 +79,8 @@ sudo chown -R 1000:1000 data backups
 | AcoustID | 设置 API Key 后启用；仅分轨做逐轨指纹投票 |
 | Discogs | 设置 Personal Access Token；60 req/min |
 | Spotify | 设置 Client ID / Secret（Client Credentials） |
-| 网易云 / QQ | 非官方接口，默认关闭；需 `ENABLE_UNOFFICIAL_PROVIDERS=true` 且自备 Cookie |
+| 网易云音乐 | 非官方接口，默认关闭；需 `ENABLE_UNOFFICIAL_PROVIDERS=true`，Cookie 可选 |
+| QQ 音乐 | 非官方接口，默认关闭；需 `ENABLE_UNOFFICIAL_PROVIDERS=true`，Cookie 可选 |
 
 凭据通过设置页写入，使用 `SECRET_KEY` 派生的 Fernet 密钥加密，API 只返回掩码。
 
