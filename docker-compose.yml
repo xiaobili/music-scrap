@@ -1,8 +1,9 @@
 services:
   music-scrap:
-    build: .
+    image: ghcr.io/xiaobili/music-scrap:latest
     container_name: music-scrap
     restart: unless-stopped
+    network_mode: bridge
     ports:
       - "8080:8080"
     environment:
@@ -15,5 +16,5 @@ services:
       TZ: ${TZ:-Asia/Shanghai}
     volumes:
       - ${MUSIC_DIR:?set MUSIC_DIR in .env}:/music
-      - ./data:/data
-      - ./backups:/backups
+      - /opt/data/music-scrap/data:/data
+      - /opt/data/music-scrap/backups:/backups

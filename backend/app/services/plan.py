@@ -85,6 +85,21 @@ def _default_cover(release: CanonicalRelease) -> CoverCandidate | None:
     return max(release.covers, key=_cover_area)
 
 
+def _resolve_cover(
+    album: Album, release: CanonicalRelease
+) -> tuple[str | None, str | None]:
+    """优先保留用户选中的封面，但它已不属于当前候选时改用当前候选的最大封面。"""
+    default_cover = _default_cover(release)
+    if not album.cover_url:
+        return (default_cover.url, default_cover.provider) if default_cover else (None, None)
+    for cover in release.covers:
+        if cover.url == album.cover_url:
+            return cover.url, cover.provider
+    if default_cover is not None:
+        return default_cover.url, default_cover.provider
+    return album.cover_url, None
+
+
 def _match_remote_index(track: Track, index: int, remote_count: int) -> int:
     if remote_count == 0:
         return -1
@@ -124,7 +139,7 @@ def build_plan(
             ChangePlan.album_id == album.id, ChangePlan.status == "draft"
         )
     )
-    default_cover = _default_cover(release)
+    cover_url, cover_provider = _resolve_cover(album, release)
     plan = ChangePlan(
         album_id=album.id,
         status="draft",
@@ -134,8 +149,8 @@ def build_plan(
             "provider": release.provider,
             "provider_id": release.provider_id,
             "release": release.model_dump(mode="json"),
-            "cover_url": album.cover_url or (default_cover.url if default_cover else None),
-            "cover_provider": default_cover.provider if default_cover else None,
+            "cover_url": cover_url,
+            "cover_provider": cover_provider,
         },
     )
     session.add(plan)

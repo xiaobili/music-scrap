@@ -232,3 +232,39 @@ async def test_apply_falls_back_to_larger_cover(settings, db, tmp_path):
     assert "https://example.com/large.jpg" in requested
     assert len(tagio.snapshot(first).images) == 1
     assert (Path(first).parent / "cover.jpg").exists()
+
+
+@pytest.mark.asyncio
+async def test_apply_falls_back_when_selected_cover_not_in_candidates(settings, db, tmp_path):
+    album, plan, first, second = _setup_album(db, tmp_path)
+    small = _jpeg(300, 300)
+    large = _jpeg(640, 640)
+    requested: list[str] = []
+
+    async def fake_download(client, url, **kwargs):
+        requested.append(url)
+        return small if "stale" in url else large
+
+    import app.services.write as write_module
+
+    original = write_module.download_cover
+    write_module.download_cover = fake_download
+    plan.payload_json = {
+        "cover_url": "https://example.com/stale.jpg",
+        "release": {
+            "covers": [
+                {"provider": "spotify", "url": "https://example.com/large.jpg", "width": 640, "height": 640}
+            ]
+        },
+    }
+    db.commit()
+    try:
+        client = httpx.AsyncClient()
+        result = await apply_plan(db, plan.id, client)
+        await client.aclose()
+    finally:
+        write_module.download_cover = original
+
+    assert requested == ["https://example.com/stale.jpg", "https://example.com/large.jpg"]
+    assert result["cover_error"] is None
+    assert len(tagio.snapshot(first).images) == 1

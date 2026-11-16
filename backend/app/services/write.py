@@ -101,17 +101,16 @@ async def apply_plan(
     payload = plan.payload_json or {}
     release_covers = (payload.get("release") or {}).get("covers") or []
     selected_cover = payload.get("cover_url")
-    provider_urls = {cover.get("url") for cover in release_covers if cover.get("url")}
     cover_urls = [selected_cover] if selected_cover else []
-    if selected_cover in provider_urls:
-        for cover in sorted(
-            release_covers,
-            key=lambda item: int(item.get("width") or 0) * int(item.get("height") or 0),
-            reverse=True,
-        ):
-            url = cover.get("url")
-            if url and url not in cover_urls:
-                cover_urls.append(url)
+    # 无论选中封面来自哪里，都按面积从大到小追加候选作为兜底
+    for cover in sorted(
+        release_covers,
+        key=lambda item: int(item.get("width") or 0) * int(item.get("height") or 0),
+        reverse=True,
+    ):
+        url = cover.get("url")
+        if url and url not in cover_urls:
+            cover_urls.append(url)
     for url in cover_urls:
         try:
             raw = await download_cover(client, url)

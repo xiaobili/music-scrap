@@ -251,3 +251,35 @@ def test_plan_cover_defaults_to_largest_candidate(db, tmp_path):
     plan = build_plan(db, album.id, candidate.id, "fill_only")
     assert plan.payload_json["cover_url"] == "https://example.com/large.jpg"
     assert plan.payload_json["cover_provider"] == "spotify"
+
+
+def test_plan_cover_replaces_stale_selection(db, tmp_path):
+    album, candidate, _, _ = _setup(db, tmp_path)
+    release = _release()
+    release.covers = [
+        CoverCandidate(provider="spotify", url="https://example.com/small.jpg", width=300, height=300),
+        CoverCandidate(provider="spotify", url="https://example.com/large.jpg", width=640, height=640),
+    ]
+    candidate.payload_json = release.model_dump(mode="json")
+    album.cover_url = "https://example.com/old-provider.jpg"
+    db.commit()
+
+    plan = build_plan(db, album.id, candidate.id, "fill_only")
+    assert plan.payload_json["cover_url"] == "https://example.com/large.jpg"
+    assert plan.payload_json["cover_provider"] == "spotify"
+
+
+def test_plan_cover_keeps_matching_selection(db, tmp_path):
+    album, candidate, _, _ = _setup(db, tmp_path)
+    release = _release()
+    release.covers = [
+        CoverCandidate(provider="spotify", url="https://example.com/small.jpg", width=300, height=300),
+        CoverCandidate(provider="spotify", url="https://example.com/large.jpg", width=640, height=640),
+    ]
+    candidate.payload_json = release.model_dump(mode="json")
+    album.cover_url = "https://example.com/small.jpg"
+    db.commit()
+
+    plan = build_plan(db, album.id, candidate.id, "fill_only")
+    assert plan.payload_json["cover_url"] == "https://example.com/small.jpg"
+    assert plan.payload_json["cover_provider"] == "spotify"
