@@ -249,4 +249,8 @@ async def get_cover_candidates(
             continue
         seen.add(cover["url"])
         unique.append(cover)
+    unique.sort(
+        key=lambda cover: int(cover.get("width") or 0) * int(cover.get("height") or 0),
+        reverse=True,
+    )
     return unique

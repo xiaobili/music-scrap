@@ -155,6 +155,24 @@ async def test_disabled_acoustid_and_discogs_are_not_enabled(db):
     assert await DiscogsProvider(ctx).is_enabled() is False
 
 
+async def test_disabled_musicbrainz_is_not_enabled(db):
+    import httpx
+
+    from app.providers.base import ProviderContext
+    from app.providers.musicbrainz import MusicBrainzProvider
+    from app.providers.registry import ProviderRegistry
+    from app.services.settings import SettingsStore
+
+    store = SettingsStore(db)
+    store.update({"musicbrainz.enabled": False})
+
+    async with httpx.AsyncClient() as client:
+        ctx = ProviderContext(db, client, store)
+        assert await MusicBrainzProvider(ctx).is_enabled() is False
+        names = [provider.name for provider in await ProviderRegistry(ctx).enabled()]
+        assert "musicbrainz" not in names
+
+
 def test_rejects_root_that_is_a_file(client, library):
     file_path = library / "not-a-dir.txt"
     file_path.write_text("x")

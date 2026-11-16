@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from .. import tagio
 from ..db.models import Album, ChangeItem, ChangePlan, MatchCandidate, Track
-from ..providers.base import CanonicalRelease
+from ..providers.base import CanonicalRelease, CoverCandidate
 from .settings import SettingsStore
 
 ALBUM_TARGET = "album"
@@ -75,6 +75,16 @@ def _make_item(
     )
 
 
+def _cover_area(cover: CoverCandidate) -> int:
+    return int(cover.width or 0) * int(cover.height or 0)
+
+
+def _default_cover(release: CanonicalRelease) -> CoverCandidate | None:
+    if not release.covers:
+        return None
+    return max(release.covers, key=_cover_area)
+
+
 def _match_remote_index(track: Track, index: int, remote_count: int) -> int:
     if remote_count == 0:
         return -1
@@ -114,6 +124,7 @@ def build_plan(
             ChangePlan.album_id == album.id, ChangePlan.status == "draft"
         )
     )
+    default_cover = _default_cover(release)
     plan = ChangePlan(
         album_id=album.id,
         status="draft",
@@ -123,8 +134,8 @@ def build_plan(
             "provider": release.provider,
             "provider_id": release.provider_id,
             "release": release.model_dump(mode="json"),
-            "cover_url": album.cover_url or (release.covers[0].url if release.covers else None),
-            "cover_provider": release.covers[0].provider if release.covers else None,
+            "cover_url": album.cover_url or (default_cover.url if default_cover else None),
+            "cover_provider": default_cover.provider if default_cover else None,
         },
     )
     session.add(plan)

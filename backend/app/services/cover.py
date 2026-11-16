@@ -34,7 +34,7 @@ def process_cover(data: bytes) -> bytes:
         image.load()
     except Exception as exc:
         raise CoverError("invalid image data") from exc
-    if min(image.size) < MIN_COVER_SIDE:
+    if max(image.size) < MIN_COVER_SIDE:
         raise CoverError(f"cover is smaller than {MIN_COVER_SIDE}px")
     image = image.convert("RGB")
     if max(image.size) > MAX_COVER_SIDE:

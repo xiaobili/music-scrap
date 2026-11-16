@@ -186,3 +186,19 @@ def test_plan_cover_defaults_to_first_candidate(db, tmp_path):
     plan = build_plan(db, album.id, candidate.id, "fill_only")
     assert plan.payload_json["cover_url"] == "https://example.com/cover.jpg"
     assert plan.payload_json["cover_provider"] == "musicbrainz"
+
+
+def test_plan_cover_defaults_to_largest_candidate(db, tmp_path):
+    album, candidate, _, _ = _setup(db, tmp_path)
+    release = _release()
+    release.covers = [
+        CoverCandidate(provider="spotify", url="https://example.com/small.jpg", width=300, height=300),
+        CoverCandidate(provider="spotify", url="https://example.com/tiny.jpg", width=64, height=64),
+        CoverCandidate(provider="spotify", url="https://example.com/large.jpg", width=640, height=640),
+    ]
+    candidate.payload_json = release.model_dump(mode="json")
+    db.commit()
+
+    plan = build_plan(db, album.id, candidate.id, "fill_only")
+    assert plan.payload_json["cover_url"] == "https://example.com/large.jpg"
+    assert plan.payload_json["cover_provider"] == "spotify"

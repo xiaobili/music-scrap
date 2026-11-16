@@ -46,6 +46,9 @@ class MusicBrainzProvider(Provider):
     def user_agent(self) -> str:
         return get_settings().musicbrainz_user_agent
 
+    async def is_enabled(self) -> bool:
+        return bool(self.ctx.store.get("musicbrainz.enabled", True))
+
     async def search_release(self, query: ReleaseQuery) -> list[CanonicalRelease]:
         parts: list[str] = []
         if query.album:
