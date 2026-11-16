@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Backend data
+backend/data/
+backend/build/
+backend/*.egg-info/
+backend/.env
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Runtime / demo
+data/
+backups/
+demo-library/
+*.log
+
+# OS
+.DS_Store

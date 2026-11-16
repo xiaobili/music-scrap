@@ -1,0 +1,19 @@
+services:
+  music-scrap:
+    build: .
+    container_name: music-scrap
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      MUSIC_ROOTS: /music
+      DB_PATH: /data/music-scrap.db
+      BACKUP_DIR: /backups
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      MUSICBRAINZ_USER_AGENT: ${MUSICBRAINZ_USER_AGENT:-music-scrap/0.1 (admin@example.com)}
+      ENABLE_UNOFFICIAL_PROVIDERS: ${ENABLE_UNOFFICIAL_PROVIDERS:-false}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ${MUSIC_DIR:?set MUSIC_DIR in .env}:/music
+      - ./data:/data
+      - ./backups:/backups

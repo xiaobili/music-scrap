@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>music·scrap — UI 原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        ink: '#14150f',
+        ink2: '#1e1f18',
+        paper: '#f3eee4',
+        paper2: '#e9e2d4',
+        line: '#d8cfbe',
+        copper: '#b8622d',
+        amber: '#c08a3e',
+        moss: '#5d7350',
+        rust: '#a4412f'
+      },
+      fontFamily: {
+        display: ['Fraunces', 'serif'],
+        sans: ['"IBM Plex Sans"', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'monospace']
+      }
+    }
+  }
+}
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  body { font-feature-settings: "ss01" 1; }
+  ::selection { background: #d99a4e; color: #14150f; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .22em;
+    text-transform: uppercase; color: rgba(20,21,15,.42);
+  }
+  .grain {
+    position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: .6;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='.05'/></svg>");
+  }
+  .vinyl {
+    width: 34px; height: 34px; border-radius: 999px; position: relative; flex: none;
+    background: repeating-radial-gradient(circle at 50% 50%, #2b2c24 0 2px, #171810 2px 3.5px);
+    border: 1px solid rgba(243,238,228,.18);
+    animation: spin 16s linear infinite;
+  }
+  .vinyl::after {
+    content: ""; position: absolute; inset: 0; margin: auto;
+    width: 9px; height: 9px; border-radius: 999px; background: #b8622d;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    border-left: 2px solid transparent; width: 100%; text-align: left;
+    color: rgba(243,238,228,.52); transition: all .2s ease;
+  }
+  .nav-item:hover { color: #f3eee4; background: rgba(243,238,228,.04); }
+  .nav-item.is-active {
+    color: #f3eee4; border-left-color: #b8622d; background: rgba(243,238,228,.06);
+  }
+  .nav-item.is-active .nav-idx { color: #d99a4e; }
+  .nav-idx { font-family: "IBM Plex Mono", monospace; font-size: 10px; opacity: .55; }
+  .card {
+    background: #fbf8f1; border: 1px solid #d8cfbe;
+    box-shadow: 0 1px 0 #d8cfbe, 0 24px 40px -34px rgba(20,21,15,.55);
+  }
+  .stamp {
+    font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: .16em;
+    text-transform: uppercase; border: 1px solid currentColor; padding: 3px 7px;
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  }
+  .leader { display: flex; align-items: baseline; gap: 6px; }
+  .leader .dots { flex: 1; border-bottom: 1px dotted rgba(20,21,15,.22); transform: translateY(-3px); }
+  .cover-frame {
+    border: 1px solid #14150f; background: #e9e2d4; padding: 8px;
+    box-shadow: 14px 14px 0 -2px #d8cfbe;
+  }
+  .cover-slot { background: linear-gradient(135deg, #ded4c2, #c4b8a0); }
+  .album-card .cover-wrap { transition: transform .45s cubic-bezier(.2,.7,.2,1), box-shadow .45s; }
+  .album-card:hover .cover-wrap { transform: translateY(-5px); box-shadow: 0 22px 34px -24px rgba(20,21,15,.7); }
+  .album-card:hover .cover-wrap img { transform: scale(1.03); }
+  .album-card img { transition: transform .7s cubic-bezier(.2,.7,.2,1); }
+  .album-check { opacity: 0; transition: opacity .2s ease; }
+  .album-card:hover .album-check, .album-check:focus-visible, .album-check:checked { opacity: 1; }
+  @media (hover: none) { .album-check { opacity: 1; } }
+  .seg { height: 8px; flex: 1; background: #d8cfbe; }
+  .seg.on { background: #b8622d; }
+  .seg.soft { background: #e2d9c9; }
+  .view { animation: fadeIn .35s ease both; }
+  .stagger > * { animation: rise .5s cubic-bezier(.2,.7,.2,1) both; }
+  .stagger > *:nth-child(2) { animation-delay: .05s; }
+  .stagger > *:nth-child(3) { animation-delay: .1s; }
+  .stagger > *:nth-child(4) { animation-delay: .15s; }
+  .stagger > *:nth-child(5) { animation-delay: .2s; }
+  .stagger > *:nth-child(6) { animation-delay: .25s; }
+  .stagger > *:nth-child(7) { animation-delay: .3s; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  .spinner { width: 10px; height: 10px; border: 1.5px solid #b8622d; border-top-color: transparent; border-radius: 999px; animation: spin .8s linear infinite; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #f3eee4; }
+  ::-webkit-scrollbar-thumb { background: #cfc4b0; border: 3px solid #f3eee4; }
+  input:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid #b8622d; outline-offset: 2px; }
+</style>
+</head>
+<body class="bg-paper text-ink font-sans antialiased">
+<div class="grain"></div>
+
+<div class="flex min-h-screen">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 flex w-[248px] -translate-x-full flex-col bg-ink text-paper transition-transform duration-300 lg:translate-x-0">
+    <div class="border-b border-paper/10 px-6 pb-6 pt-7">
+      <div class="flex items-center gap-3">
+        <span class="vinyl"></span>
+        <div>
+          <div class="font-display text-xl italic leading-none">music<span class="not-italic text-copper">·</span>scrap</div>
+          <div class="mt-1.5 font-mono text-[8px] tracking-[.28em] text-paper/35">METADATA ATELIER</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 space-y-0.5 px-2 py-4">
+      <button class="nav-item is-active" data-goto="overview">
+        <span class="nav-idx">01</span>
+        <span class="flex-1">概览<span class="mt-0.5 block font-mono text-[9px] tracking-[.2em] opacity-40">OVERVIEW</span></span>
+      </button>
+      <button class="nav-item" data-goto="albums">
+        <span class="nav-idx">02</span>
+        <span class="flex-1">专辑库<span class="mt-0.5 block font-mono text-[9px] tracking-[.2em] opacity-40">LIBRARY</span></span>
+      </button>
+      <button class="nav-item" data-goto="album">
+        <span class="nav-idx">03</span>
+        <span class="flex-1">专辑详情<span class="mt-0.5 block font-mono text-[9px] tracking-[.2em] opacity-40">RELEASE</span></span>
+      </button>
+      <button class="nav-item" data-goto="review">
+        <span class="nav-idx">04</span>
+        <span class="flex-1">变更预览<span class="mt-0.5 block font-mono text-[9px] tracking-[.2em] opacity-40">REVIEW</span></span>
+      </button>
+      <button class="nav-item" data-goto="tasks">
+        <span class="nav-idx">05</span>
+        <span class="flex-1">任务中心<span class="mt-0.5 block font-mono text-[9px] tracking-[.2em] opacity-40">TASKS</span></span>
+      </button>
+      <button class="nav-item" data-goto="history">
+        <span class="nav-idx">06</span>
+        <span class="flex-1">历史与回滚<span class="mt-0.5 block font-mono text-[9px] tracking-[.2em] opacity-40">HISTORY</span></span>
+      </button>
+      <button class="nav-item" data-goto="settings">
+        <span class="nav-idx">07</span>
+        <span class="flex-1">设置<span class="mt-0.5 block font-mono text-[9px] tracking-[.2em] opacity-40">SETTINGS</span></span>
+      </button>
+    </nav>
+
+    <div class="border-t border-paper/10 px-5 py-5">
+      <div class="font-mono text-[10px] tracking-[.08em] text-paper/35">NAS · 192.168.1.24:8080</div>
+      <div class="mt-2 flex items-center gap-2 font-mono text-[10px] text-paper/50">
+        <span class="h-1.5 w-1.5 rounded-full bg-moss"></span>服务正常 · v0.1
+      </div>
+    </div>
+  </aside>
+
+  <div class="min-w-0 flex-1 lg:pl-[248px]">
+
+    <!-- ============ TOPBAR ============ -->
+    <header class="sticky top-0 z-40 border-b border-line bg-paper/85 backdrop-blur">
+      <div class="flex h-16 items-center gap-3 px-5 sm:px-8">
+        <button id="menuBtn" class="border border-line p-2 lg:hidden" aria-label="菜单">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5"/></svg>
+        </button>
+        <div class="hidden font-mono text-[10px] tracking-[.2em] text-ink/35 sm:block">
+          LIBRARY / <span id="crumb" class="text-ink/70">OVERVIEW</span>
+        </div>
+        <div class="ml-auto flex items-center gap-3">
+          <div class="relative hidden md:block">
+            <svg class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink/35" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m16.5 16.5 4 4"/></svg>
+            <input id="globalSearch" placeholder="搜索专辑、艺术家、目录…" class="w-72 border border-line bg-transparent py-2 pl-8 pr-14 font-mono text-[11px] placeholder:text-ink/30 focus:border-ink focus:outline-none">
+            <span class="absolute right-1.5 top-1/2 -translate-y-1/2 border border-line px-1.5 py-0.5 font-mono text-[9px] text-ink/35">⌘K</span>
+          </div>
+          <button class="stamp py-2.5 transition hover:bg-ink hover:text-paper" data-goto="tasks">
+            扫描曲库
+            <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-6-6 6 6-6 6"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-[1500px] px-5 py-8 sm:px-8 lg:py-10">
+
+      <!-- ==================== 01 OVERVIEW ==================== -->
+      <section data-view-section="overview" class="view">
+        <div class="flex flex-wrap items-end justify-between gap-8 border-b border-line pb-8">
+          <div class="max-w-2xl">
+            <p class="eyebrow">01 / OVERVIEW</p>
+            <h1 class="mt-3 font-display text-[clamp(2.5rem,5vw,4.4rem)] leading-[0.95] tracking-[-0.02em]">
+              唱片柜，<em class="italic text-copper">已索引</em>。
+            </h1>
+            <p class="mt-5 max-w-lg text-sm leading-relaxed text-ink/55">
+              4,908 个文件完成归档，312 张专辑等待或已经完成裁决。每一次写入都会留下快照，随时可以退回。
+            </p>
+          </div>
+          <div class="flex gap-8 sm:gap-12">
+            <div>
+              <div class="font-display text-[3.2rem] leading-none tracking-tight">4,908</div>
+              <div class="eyebrow mt-2">FILES</div>
+            </div>
+            <div>
+              <div class="font-display text-[3.2rem] leading-none tracking-tight">312</div>
+              <div class="eyebrow mt-2">ALBUMS</div>
+            </div>
+            <div>
+              <div class="font-display text-[3.2rem] leading-none tracking-tight text-copper">87</div>
+              <div class="eyebrow mt-2">TO REVIEW</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-10 grid gap-10 lg:grid-cols-12">
+          <div class="lg:col-span-8">
+            <div class="flex items-center justify-between">
+              <h2 class="font-display text-2xl">待你裁决</h2>
+              <button class="eyebrow transition hover:text-copper" data-goto="albums">全部 87 张 →</button>
+            </div>
+            <div class="mt-4 stagger border-t border-line">
+              <a href="#" data-goto="album" class="group flex items-center gap-4 border-b border-line/70 py-3.5 transition hover:bg-paper2/40">
+                <img data-cover="city" alt="" class="h-12 w-12 flex-none border border-line object-cover">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <h3 class="truncate font-display text-base">城市天气</h3>
+                    <span class="stamp text-amber">待选择</span>
+                  </div>
+                  <div class="leader mt-1.5 font-mono text-[10px] text-ink/45">
+                    <span>甜梅号 · 9 曲 · FLAC</span><span class="dots"></span><span>0.78</span>
+                  </div>
+                </div>
+                <span class="hidden font-mono text-[10px] text-copper sm:block">对比候选 →</span>
+              </a>
+              <a href="#" data-goto="album" class="group flex items-center gap-4 border-b border-line/70 py-3.5 transition hover:bg-paper2/40">
+                <img data-cover="loveless" alt="" class="h-12 w-12 flex-none border border-line object-cover">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <h3 class="truncate font-display text-base">Loveless</h3>
+                    <span class="stamp text-amber">待选择</span>
+                  </div>
+                  <div class="leader mt-1.5 font-mono text-[10px] text-ink/45">
+                    <span>My Bloody Valentine · 整轨 · 1 文件</span><span class="dots"></span><span>0.66</span>
+                  </div>
+                </div>
+                <span class="hidden font-mono text-[10px] text-copper sm:block">对比候选 →</span>
+              </a>
+              <a href="#" data-goto="album" class="group flex items-center gap-4 border-b border-line/70 py-3.5 transition hover:bg-paper2/40">
+                <img data-cover="moon" alt="" class="h-12 w-12 flex-none border border-line object-cover">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <h3 class="truncate font-display text-base">月光</h3>
+                    <span class="stamp text-rust">未匹配</span>
+                  </div>
+                  <div class="leader mt-1.5 font-mono text-[10px] text-ink/45">
+                    <span>李泉 · 11 曲 · APE</span><span class="dots"></span><span>0.41</span>
+                  </div>
+                </div>
+                <span class="hidden font-mono text-[10px] text-copper sm:block">手动搜索 →</span>
+              </a>
+              <a href="#" data-goto="album" class="group flex items-center gap-4 border-b border-line/70 py-3.5 transition hover:bg-paper2/40">
+                <img data-cover="suzhou" alt="" class="h-12 w-12 flex-none border border-line object-cover">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <h3 class="truncate font-display text-base">青蛇 · 电影原声</h3>
+                    <span class="stamp text-rust">未匹配</span>
+                  </div>
+                  <div class="leader mt-1.5 font-mono text-[10px] text-ink/45">
+                    <span>原声带 · 12 曲 · WAV</span><span class="dots"></span><span>0.52</span>
+                  </div>
+                </div>
+                <span class="hidden font-mono text-[10px] text-copper sm:block">手动搜索 →</span>
+              </a>
+            </div>
+
+            <div class="mt-10">
+              <h2 class="font-display text-2xl">最近写入</h2>
+              <div class="mt-4 overflow-x-auto border-t border-line">
+                <table class="w-full min-w-[560px] text-left">
+                  <thead>
+                    <tr class="border-b border-line/70">
+                      <th class="eyebrow py-2 font-normal">TIME</th>
+                      <th class="eyebrow py-2 font-normal">RELEASE</th>
+                      <th class="eyebrow py-2 font-normal">FILES</th>
+                      <th class="eyebrow py-2 font-normal">SOURCE</th>
+                      <th class="eyebrow py-2 text-right font-normal">STATE</th>
+                    </tr>
+                  </thead>
+                  <tbody class="font-mono text-[11px] text-ink/65">
+                    <tr class="border-b border-line/50">
+                      <td class="py-3 text-ink/40">13:42</td>
+                      <td class="py-3 font-sans text-[13px] text-ink">城市天气 — 甜梅号</td>
+                      <td class="py-3">12</td>
+                      <td class="py-3">MB + Discogs</td>
+                      <td class="py-3 text-right"><span class="stamp text-moss">已写入</span></td>
+                    </tr>
+                    <tr class="border-b border-line/50">
+                      <td class="py-3 text-ink/40">11:08</td>
+                      <td class="py-3 font-sans text-[13px] text-ink">Kind of Blue — Miles Davis</td>
+                      <td class="py-3">5</td>
+                      <td class="py-3">MusicBrainz</td>
+                      <td class="py-3 text-right"><span class="stamp text-moss">已写入</span></td>
+                    </tr>
+                    <tr class="border-b border-line/50">
+                      <td class="py-3 text-ink/40">昨天</td>
+                      <td class="py-3 font-sans text-[13px] text-ink">The Köln Concert — Keith Jarrett</td>
+                      <td class="py-3">1</td>
+                      <td class="py-3">Discogs</td>
+                      <td class="py-3 text-right"><span class="stamp text-moss">已写入</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-4">
+            <div class="card p-5">
+              <div class="flex items-center justify-between">
+                <span class="eyebrow">RUNNING TASK</span>
+                <span class="font-mono text-[10px] text-copper">#J-2048</span>
+              </div>
+              <h3 class="mt-2 font-display text-xl">扫描 /music/library</h3>
+              <div class="mt-5 flex gap-1">
+                <span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span>
+                <span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span>
+                <span class="seg soft"></span><span class="seg soft"></span><span class="seg soft"></span><span class="seg soft"></span>
+              </div>
+              <div class="mt-2 flex justify-between font-mono text-[10px] text-ink/45">
+                <span>3,412 / 4,908</span><span>69%</span>
+              </div>
+
+              <ol class="mt-6 space-y-3 text-[12px]">
+                <li class="flex items-center gap-2.5 text-ink/40">
+                  <svg class="h-3.5 w-3.5 text-moss" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                  遍历目录
+                </li>
+                <li class="flex items-center gap-2.5">
+                  <span class="spinner"></span>
+                  解析标签与 CUE
+                  <span class="ml-auto font-mono text-[10px] text-copper">运行中</span>
+                </li>
+                <li class="flex items-center gap-2.5 text-ink/35">
+                  <span class="h-3.5 w-3.5 rounded-full border border-line"></span>
+                  生成目录指纹
+                </li>
+                <li class="flex items-center gap-2.5 text-ink/35">
+                  <span class="h-3.5 w-3.5 rounded-full border border-line"></span>
+                  写入索引
+                </li>
+              </ol>
+
+              <div class="mt-6 flex gap-2">
+                <button class="flex-1 border border-line py-2 font-mono text-[10px] tracking-[.18em] transition hover:border-ink">暂停</button>
+                <button class="flex-1 border border-line py-2 font-mono text-[10px] tracking-[.18em] text-rust transition hover:border-rust">取消</button>
+              </div>
+            </div>
+
+            <div class="mt-6 border border-line p-5">
+              <div class="eyebrow">SOURCE COVERAGE</div>
+              <div class="mt-4 space-y-3">
+                <div>
+                  <div class="flex justify-between font-mono text-[10px]"><span>MusicBrainz</span><span class="text-ink/40">68%</span></div>
+                  <div class="mt-1 h-1.5 bg-line"><div class="h-full bg-ink" style="width:68%"></div></div>
+                </div>
+                <div>
+                  <div class="flex justify-between font-mono text-[10px]"><span>Discogs</span><span class="text-ink/40">52%</span></div>
+                  <div class="mt-1 h-1.5 bg-line"><div class="h-full bg-ink" style="width:52%"></div></div>
+                </div>
+                <div>
+                  <div class="flex justify-between font-mono text-[10px]"><span>Spotify</span><span class="text-ink/40">41%</span></div>
+                  <div class="mt-1 h-1.5 bg-line"><div class="h-full bg-ink" style="width:41%"></div></div>
+                </div>
+                <div>
+                  <div class="flex justify-between font-mono text-[10px]"><span>网易云 / QQ</span><span class="text-ink/40">23%</span></div>
+                  <div class="mt-1 h-1.5 bg-line"><div class="h-full bg-amber" style="width:23%"></div></div>
+                </div>
+              </div>
+              <p class="mt-4 font-mono text-[9px] leading-relaxed tracking-[.06em] text-ink/35">命中率由各源限流与曲库覆盖共同决定</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 02 ALBUMS ==================== -->
+      <section data-view-section="albums" class="view hidden">
+        <div class="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
+          <div>
+            <p class="eyebrow">02 / LIBRARY</p>
+            <h1 class="mt-3 font-display text-[clamp(2rem,4vw,3.2rem)] leading-none tracking-[-0.02em]">专辑库</h1>
+            <p class="mt-3 font-mono text-[11px] text-ink/45">312 张专辑 · 4,908 个文件 · 2 个根目录</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="stamp py-2.5 text-ink/50">按最近更新 ↓</button>
+            <button class="stamp py-2.5 transition hover:bg-ink hover:text-paper" data-goto="review">查看已选计划</button>
+          </div>
+        </div>
+
+        <div class="mt-8 grid gap-10 lg:grid-cols-[190px_1fr]">
+          <aside class="space-y-7">
+            <div>
+              <h3 class="eyebrow mb-3">STATUS</h3>
+              <div class="space-y-1">
+                <button class="filter-chip flex w-full items-center justify-between border border-ink bg-ink px-3 py-2 font-mono text-[10px] tracking-[.1em] text-paper">
+                  全部 <span class="opacity-50">312</span>
+                </button>
+                <button class="filter-chip flex w-full items-center justify-between border border-transparent px-3 py-2 font-mono text-[10px] tracking-[.1em] text-ink/55 hover:border-line">
+                  已匹配 <span class="opacity-50">194</span>
+                </button>
+                <button class="filter-chip flex w-full items-center justify-between border border-transparent px-3 py-2 font-mono text-[10px] tracking-[.1em] text-ink/55 hover:border-line">
+                  待选择 <span class="opacity-50">87</span>
+                </button>
+                <button class="filter-chip flex w-full items-center justify-between border border-transparent px-3 py-2 font-mono text-[10px] tracking-[.1em] text-ink/55 hover:border-line">
+                  未匹配 <span class="opacity-50">31</span>
+                </button>
+              </div>
+            </div>
+            <div>
+              <h3 class="eyebrow mb-3">FORMAT</h3>
+              <div class="flex flex-wrap gap-1.5">
+                <button class="filter-chip stamp py-2 text-ink/60">整轨</button>
+                <button class="filter-chip stamp py-2 border-ink bg-ink text-paper">分轨</button>
+                <button class="filter-chip stamp py-2 text-ink/60">FLAC</button>
+                <button class="filter-chip stamp py-2 text-ink/60">APE</button>
+              </div>
+            </div>
+            <div>
+              <h3 class="eyebrow mb-3">ROOT</h3>
+              <div class="space-y-1 font-mono text-[10px] text-ink/55">
+                <button class="filter-chip flex w-full items-center gap-2 px-1 py-1.5 text-left hover:text-ink"><span class="h-1.5 w-1.5 bg-copper"></span>/music/library</button>
+                <button class="filter-chip flex w-full items-center gap-2 px-1 py-1.5 text-left hover:text-ink"><span class="h-1.5 w-1.5 bg-line"></span>/volume2/classical</button>
+              </div>
+            </div>
+            <div class="border-t border-line pt-5">
+              <h3 class="eyebrow mb-3">CONFIDENCE ≥ 0.80</h3>
+              <div class="relative h-1 bg-line">
+                <div class="absolute left-0 top-0 h-full w-4/5 bg-ink"></div>
+                <div class="absolute left-4/5 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-paper bg-ink"></div>
+              </div>
+              <div class="mt-2 flex justify-between font-mono text-[9px] text-ink/35"><span>0</span><span>1.0</span></div>
+            </div>
+          </aside>
+
+          <div>
+            <div id="albumGrid" class="grid grid-cols-2 gap-x-5 gap-y-9 md:grid-cols-3 xl:grid-cols-4">
+              <article class="album-card group" data-title="Kind of Blue" data-artist="Miles Davis">
+                <div class="relative">
+                  <input type="checkbox" class="album-check absolute left-2 top-2 z-10 h-4 w-4 accent-[#b8622d]" aria-label="选择 Kind of Blue">
+                  <div class="cover-wrap relative aspect-square overflow-hidden border border-line">
+                    <img data-cover="blue" alt="" class="h-full w-full object-cover">
+                    <span class="stamp absolute right-2 top-2 bg-paper/90">分轨</span>
+                  </div>
+                </div>
+                <div class="mt-3 flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <h3 class="truncate font-display text-[17px] leading-tight">Kind of Blue</h3>
+                    <p class="mt-1 truncate font-mono text-[10px] text-ink/45">Miles Davis · 1959</p>
+                  </div>
+                  <div class="flex-none text-right">
+                    <span class="font-mono text-[10px] text-ink/40">0.96</span>
+                    <div class="mt-1 flex justify-end gap-[2px]">
+                      <span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="album-card group" data-title="The Köln Concert" data-artist="Keith Jarrett">
+                <div class="relative">
+                  <input type="checkbox" class="album-check absolute left-2 top-2 z-10 h-4 w-4 accent-[#b8622d]" aria-label="选择 The Köln Concert">
+                  <div class="cover-wrap relative aspect-square overflow-hidden border border-line">
+                    <img data-cover="piano" alt="" class="h-full w-full object-cover">
+                    <span class="stamp absolute right-2 top-2 bg-ink text-paper">整轨</span>
+                  </div>
+                </div>
+                <div class="mt-3 flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <h3 class="truncate font-display text-[17px] leading-tight">The Köln Concert</h3>
+                    <p class="mt-1 truncate font-mono text-[10px] text-ink/45">Keith Jarrett · 1975</p>
+                  </div>
+                  <div class="flex-none text-right">
+                    <span class="font-mono text-[10px] text-ink/40">0.91</span>
+                    <div class="mt-1 flex justify-end gap-[2px]">
+                      <span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="album-card group" data-title="城市天气" data-artist="甜梅号">
+                <div class="relative">
+                  <input type="checkbox" class="album-check absolute left-2 top-2 z-10 h-4 w-4 accent-[#b8622d]" aria-label="选择 城市天气">
+                  <div class="cover-wrap relative aspect-square overflow-hidden border border-line">
+                    <img data-cover="city" alt="" class="h-full w-full object-cover">
+                    <span class="stamp absolute right-2 top-2 bg-paper/90">分轨</span>
+                  </div>
+                </div>
+                <div class="mt-3 flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <h3 class="truncate font-display text-[17px] leading-tight">城市天气</h3>
+                    <p class="mt-1 truncate font-mono text-[10px] text-ink/45">甜梅号 · 2010</p>
+                  </div>
+                  <div class="flex-none text-right">
+                    <span class="font-mono text-[10px] text-copper">0.78</span>
+                    <div class="mt-1 flex justify-end gap-[2px]">
+                      <span class="h-2.5 w-[3px] bg-amber"></span><span class="h-2.5 w-[3px] bg-amber"></span><span class="h-2.5 w-[3px] bg-amber"></span><span class="h-2.5 w-[3px] bg-amber"></span><span class="h-2.5 w-[3px] bg-line"></span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="album-card group" data-title="The Dark Side of the Moon" data-artist="Pink Floyd">
+                <div class="relative">
+                  <input type="checkbox" class="album-check absolute left-2 top-2 z-10 h-4 w-4 accent-[#b8622d]" aria-label="选择 The Dark Side of the Moon">
+                  <div class="cover-wrap relative aspect-square overflow-hidden border border-line">
+                    <img data-cover="prism" alt="" class="h-full w-full object-cover">
+                    <span class="stamp absolute right-2 top-2 bg-ink text-paper">整轨</span>
+                  </div>
+                </div>
+                <div class="mt-3 flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <h3 class="truncate font-display text-[17px] leading-tight">The Dark Side of the Moon</h3>
+                    <p class="mt-1 truncate font-mono text-[10px] text-ink/45">Pink Floyd · 1973</p>
+                  </div>
+                  <div class="flex-none text-right">
+                    <span class="font-mono text-[10px] text-ink/40">0.99</span>
+                    <div class="mt-1 flex justify-end gap-[2px]">
+                      <span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="album-card group" data-title="青蛇 电影原声" data-artist="原声带">
+                <div class="relative">
+                  <input type="checkbox" class="album-check absolute left-2 top-2 z-10 h-4 w-4 accent-[#b8622d]" aria-label="选择 青蛇">
+                  <div class="cover-wrap relative aspect-square overflow-hidden border border-line">
+                    <img data-cover="suzhou" alt="" class="h-full w-full object-cover">
+                    <span class="stamp absolute right-2 top-2 bg-paper/90">分轨</span>
+                  </div>
+                </div>
+                <div class="mt-3 flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <h3 class="truncate font-display text-[17px] leading-tight">青蛇 · 电影原声</h3>
+                    <p class="mt-1 truncate font-mono text-[10px] text-ink/45">原声带 · 1993</p>
+                  </div>
+                  <div class="flex-none text-right">
+                    <span class="font-mono text-[10px] text-rust">0.52</span>
+                    <div class="mt-1 flex justify-end gap-[2px]">
+                      <span class="h-2.5 w-[3px] bg-rust"></span><span class="h-2.5 w-[3px] bg-rust"></span><span class="h-2.5 w-[3px] bg-rust"></span><span class="h-2.5 w-[3px] bg-line"></span><span class="h-2.5 w-[3px] bg-line"></span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="album-card group" data-title="Blue Train" data-artist="John Coltrane">
+                <div class="relative">
+                  <input type="checkbox" class="album-check absolute left-2 top-2 z-10 h-4 w-4 accent-[#b8622d]" aria-label="选择 Blue Train">
+                  <div class="cover-wrap relative aspect-square overflow-hidden border border-line">
+                    <img data-cover="jazz" alt="" class="h-full w-full object-cover">
+                    <span class="stamp absolute right-2 top-2 bg-paper/90">分轨</span>
+                  </div>
+                </div>
+                <div class="mt-3 flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <h3 class="truncate font-display text-[17px] leading-tight">Blue Train</h3>
+                    <p class="mt-1 truncate font-mono text-[10px] text-ink/45">John Coltrane · 1958</p>
+                  </div>
+                  <div class="flex-none text-right">
+                    <span class="font-mono text-[10px] text-ink/40">0.88</span>
+                    <div class="mt-1 flex justify-end gap-[2px]">
+                      <span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-moss"></span><span class="h-2.5 w-[3px] bg-line"></span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="album-card group" data-title="Loveless" data-artist="My Bloody Valentine">
+                <div class="relative">
+                  <input type="checkbox" class="album-check absolute left-2 top-2 z-10 h-4 w-4 accent-[#b8622d]" aria-label="选择 Loveless">
+                  <div class="cover-wrap relative aspect-square overflow-hidden border border-line">
+                    <img data-cover="loveless" alt="" class="h-full w-full object-cover">
+                    <span class="stamp absolute right-2 top-2 bg-ink text-paper">整轨</span>
+                  </div>
+                </div>
+                <div class="mt-3 flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <h3 class="truncate font-display text-[17px] leading-tight">Loveless</h3>
+                    <p class="mt-1 truncate font-mono text-[10px] text-ink/45">My Bloody Valentine · 1991</p>
+                  </div>
+                  <div class="flex-none text-right">
+                    <span class="font-mono text-[10px] text-copper">0.66</span>
+                    <div class="mt-1 flex justify-end gap-[2px]">
+                      <span class="h-2.5 w-[3px] bg-amber"></span><span class="h-2.5 w-[3px] bg-amber"></span><span class="h-2.5 w-[3px] bg-amber"></span><span class="h-2.5 w-[3px] bg-line"></span><span class="h-2.5 w-[3px] bg-line"></span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="album-card group" data-title="月光" data-artist="李泉">
+                <div class="relative">
+                  <input type="checkbox" class="album-check absolute left-2 top-2 z-10 h-4 w-4 accent-[#b8622d]" aria-label="选择 月光">
+                  <div class="cover-wrap relative aspect-square overflow-hidden border border-line">
+                    <img data-cover="moon" alt="" class="h-full w-full object-cover">
+                    <span class="stamp absolute right-2 top-2 bg-paper/90">分轨</span>
+                  </div>
+                </div>
+                <div class="mt-3 flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <h3 class="truncate font-display text-[17px] leading-tight">月光</h3>
+                    <p class="mt-1 truncate font-mono text-[10px] text-ink/45">李泉 · 2003</p>
+                  </div>
+                  <div class="flex-none text-right">
+                    <span class="font-mono text-[10px] text-rust">0.41</span>
+                    <div class="mt-1 flex justify-end gap-[2px]">
+                      <span class="h-2.5 w-[3px] bg-rust"></span><span class="h-2.5 w-[3px] bg-rust"></span><span class="h-2.5 w-[3px] bg-line"></span><span class="h-2.5 w-[3px] bg-line"></span><span class="h-2.5 w-[3px] bg-line"></span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <div class="mt-10 flex items-center justify-between border-t border-line pt-4">
+              <span class="font-mono text-[10px] text-ink/40">显示 1–8 / 312</span>
+              <div class="flex gap-1">
+                <button class="stamp px-3 py-2 text-ink/35">←</button>
+                <button class="stamp bg-ink px-3 py-2 text-paper">1</button>
+                <button class="stamp px-3 py-2 text-ink/55 hover:border-ink">2</button>
+                <button class="stamp px-3 py-2 text-ink/55 hover:border-ink">3</button>
+                <button class="stamp px-3 py-2 text-ink/55 hover:border-ink">→</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 03 ALBUM DETAIL ==================== -->
+      <section data-view-section="album" class="view hidden">
+        <button class="eyebrow transition hover:text-copper" data-goto="albums">← 返回专辑库</button>
+
+        <div class="mt-7 grid gap-10 lg:grid-cols-[minmax(0,360px)_1fr]">
+          <div class="relative">
+            <div class="absolute -left-6 top-0 hidden h-full w-5 border-l border-line lg:block">
+              <span class="absolute top-1/2 -translate-y-1/2 -rotate-90 whitespace-nowrap font-mono text-[9px] tracking-[.32em] text-ink/30">MC-0312 · SPLIT</span>
+            </div>
+            <div class="cover-frame">
+              <img data-cover="city" data-size="square_hd" alt="" class="aspect-square w-full object-cover">
+            </div>
+            <div class="mt-5 grid grid-cols-2 gap-2">
+              <button class="border border-line py-2.5 font-mono text-[10px] tracking-[.16em] transition hover:border-ink" data-open-cover>更换封面</button>
+              <button class="border border-line py-2.5 font-mono text-[10px] tracking-[.16em] transition hover:border-ink">查看原图</button>
+            </div>
+
+            <div class="mt-6 border border-line p-4">
+              <div class="flex items-center justify-between">
+                <span class="eyebrow">COVER CANDIDATES</span>
+                <span class="font-mono text-[9px] text-ink/35">4 张</span>
+              </div>
+              <div class="mt-3 grid grid-cols-4 gap-2">
+                <button data-open-cover class="aspect-square overflow-hidden border border-ink"><img data-cover="city" alt="" class="h-full w-full object-cover"></button>
+                <button data-open-cover class="aspect-square overflow-hidden border border-line opacity-70 transition hover:opacity-100"><img data-cover="suzhou" alt="" class="h-full w-full object-cover"></button>
+                <button data-open-cover class="aspect-square overflow-hidden border border-line opacity-70 transition hover:opacity-100"><img data-cover="prism" alt="" class="h-full w-full object-cover"></button>
+                <button data-open-cover class="aspect-square overflow-hidden border border-line opacity-70 transition hover:opacity-100"><img data-cover="moon" alt="" class="h-full w-full object-cover"></button>
+              </div>
+              <p class="mt-3 font-mono text-[9px] leading-relaxed text-ink/35">Cover Art Archive · 1200×1200 · JPEG</p>
+            </div>
+          </div>
+
+          <div class="min-w-0">
+            <p class="eyebrow">RELEASE / SPLIT · FLAC 16/44.1</p>
+            <h1 class="mt-3 font-display text-[clamp(2.2rem,4vw,3.6rem)] leading-none tracking-[-0.02em]">城市天气</h1>
+            <p class="mt-3 font-display text-xl italic text-ink/55">甜梅号</p>
+
+            <div class="mt-5 flex flex-wrap gap-2">
+              <span class="stamp text-ink/55">2010</span>
+              <span class="stamp text-ink/55">9 曲</span>
+              <span class="stamp text-ink/55">后摇滚</span>
+              <span class="stamp text-ink/55">42:18</span>
+              <span class="stamp text-amber">待选择 · 0.78</span>
+            </div>
+
+            <div class="mt-8 grid gap-x-8 gap-y-2.5 border-t border-line pt-5 sm:grid-cols-2">
+              <div class="leader font-mono text-[11px]"><span class="w-32 flex-none text-ink/35">ALBUM</span><span class="dots"></span><span>城市天气</span></div>
+              <div class="leader font-mono text-[11px]"><span class="w-32 flex-none text-ink/35">ALBUMARTIST</span><span class="dots"></span><span class="text-ink/30">— 空</span></div>
+              <div class="leader font-mono text-[11px]"><span class="w-32 flex-none text-ink/35">DATE</span><span class="dots"></span><span>2011</span></div>
+              <div class="leader font-mono text-[11px]"><span class="w-32 flex-none text-ink/35">LABEL</span><span class="dots"></span><span class="text-ink/30">— 空</span></div>
+              <div class="leader font-mono text-[11px]"><span class="w-32 flex-none text-ink/35">CATALOGNUMBER</span><span class="dots"></span><span class="text-ink/30">— 空</span></div>
+              <div class="leader font-mono text-[11px]"><span class="w-32 flex-none text-ink/35">MUSICBRAINZ_ALBUMID</span><span class="dots"></span><span class="text-ink/30">— 空</span></div>
+            </div>
+            <p class="mt-3 font-mono text-[9px] text-ink/35">目录 /music/library/甜梅号/城市天气 (2011)</p>
+
+            <div class="mt-10">
+              <div class="flex items-end justify-between">
+                <div>
+                  <h2 class="font-display text-2xl">候选匹配</h2>
+                  <p class="mt-1 font-mono text-[10px] text-ink/40">按置信度排序 · 4 个来源</p>
+                </div>
+                <button class="stamp py-2 text-ink/55 transition hover:border-ink hover:text-ink">重新检索</button>
+              </div>
+
+              <div class="mt-4 space-y-2">
+                <div class="border border-line border-l-2 border-l-copper bg-[#fbf8f1] p-4">
+                  <div class="flex items-start gap-4">
+                    <span class="stamp mt-0.5 text-ink/60">MB</span>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="font-display text-lg leading-tight">城市天气</h3>
+                        <span class="stamp text-copper">推荐</span>
+                      </div>
+                      <p class="mt-1 font-mono text-[10px] text-ink/45">2010 · 9 tracks · 42:18 · 时长差 16s</p>
+                      <p class="mt-1 font-mono text-[9px] text-ink/30">MusicBrainz · release 1f2c…9ab</p>
+                    </div>
+                    <div class="flex-none text-right">
+                      <div class="font-display text-2xl leading-none">0.78</div>
+                      <div class="mt-2 h-1 w-24 bg-line"><div class="h-full bg-copper" style="width:78%"></div></div>
+                      <button class="stamp mt-3 py-1.5 transition hover:bg-ink hover:text-paper" data-select-candidate>选择</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="border border-line p-4">
+                  <div class="flex items-start gap-4">
+                    <span class="stamp mt-0.5 text-ink/60">DC</span>
+                    <div class="min-w-0 flex-1">
+                      <h3 class="font-display text-lg leading-tight">城市天氣</h3>
+                      <p class="mt-1 font-mono text-[10px] text-ink/45">2010 · CD · 9 tracks · 42:31 · 时长差 13s</p>
+                      <p class="mt-1 font-mono text-[9px] text-ink/30">Discogs · release 2048…112</p>
+                    </div>
+                    <div class="flex-none text-right">
+                      <div class="font-display text-2xl leading-none">0.74</div>
+                      <div class="mt-2 h-1 w-24 bg-line"><div class="h-full bg-ink/50" style="width:74%"></div></div>
+                      <button class="stamp mt-3 py-1.5 transition hover:bg-ink hover:text-paper" data-select-candidate>选择</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="border border-line p-4">
+                  <div class="flex items-start gap-4">
+                    <span class="stamp mt-0.5 text-ink/60">NE</span>
+                    <div class="min-w-0 flex-1">
+                      <h3 class="font-display text-lg leading-tight">城市天气</h3>
+                      <p class="mt-1 font-mono text-[10px] text-ink/45">2010 · 9 tracks · 42:18</p>
+                      <p class="mt-1 font-mono text-[9px] text-ink/30">网易云音乐 · album 3021…664</p>
+                    </div>
+                    <div class="flex-none text-right">
+                      <div class="font-display text-2xl leading-none">0.71</div>
+                      <div class="mt-2 h-1 w-24 bg-line"><div class="h-full bg-ink/40" style="width:71%"></div></div>
+                      <button class="stamp mt-3 py-1.5 transition hover:bg-ink hover:text-paper" data-select-candidate>选择</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="border border-line p-4 opacity-70">
+                  <div class="flex items-start gap-4">
+                    <span class="stamp mt-0.5 text-ink/60">SP</span>
+                    <div class="min-w-0 flex-1">
+                      <h3 class="font-display text-lg leading-tight">City Weather</h3>
+                      <p class="mt-1 font-mono text-[10px] text-ink/45">2010 · 9 tracks · 42:20</p>
+                      <p class="mt-1 font-mono text-[9px] text-ink/30">Spotify · album 4xK9…Qm</p>
+                    </div>
+                    <div class="flex-none text-right">
+                      <div class="font-display text-2xl leading-none">0.63</div>
+                      <div class="mt-2 h-1 w-24 bg-line"><div class="h-full bg-ink/30" style="width:63%"></div></div>
+                      <button class="stamp mt-3 py-1.5 transition hover:bg-ink hover:text-paper" data-select-candidate>选择</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-10">
+              <div class="flex items-end justify-between">
+                <h2 class="font-display text-2xl">曲目</h2>
+                <span class="font-mono text-[10px] text-ink/40">9 个文件 · 全部为 FLAC</span>
+              </div>
+              <div class="mt-4 overflow-x-auto border-t border-line">
+                <table class="w-full min-w-[620px] text-left">
+                  <thead>
+                    <tr class="border-b border-line/70">
+                      <th class="eyebrow w-10 py-2 font-normal">#</th>
+                      <th class="eyebrow py-2 font-normal">TITLE</th>
+                      <th class="eyebrow py-2 font-normal">DURATION</th>
+                      <th class="eyebrow py-2 font-normal">CURRENT TAG</th>
+                      <th class="eyebrow py-2 text-right font-normal">STATE</th>
+                    </tr>
+                  </thead>
+                  <tbody class="text-[13px]">
+                    <tr class="border-b border-line/50">
+                      <td class="py-2.5 font-mono text-[11px] text-ink/35">01</td>
+                      <td class="py-2.5">一个人的旅行</td>
+                      <td class="py-2.5 font-mono text-[11px] text-ink/45">5:12</td>
+                      <td class="py-2.5 font-mono text-[10px] text-ink/35">标题缺失 · 轨号缺失</td>
+                      <td class="py-2.5 text-right"><span class="stamp text-amber">待补</span></td>
+                    </tr>
+                    <tr class="border-b border-line/50">
+                      <td class="py-2.5 font-mono text-[11px] text-ink/35">02</td>
+                      <td class="py-2.5">城市天气</td>
+                      <td class="py-2.5 font-mono text-[11px] text-ink/45">4:38</td>
+                      <td class="py-2.5 font-mono text-[10px] text-ink/35">标题缺失 · 轨号缺失</td>
+                      <td class="py-2.5 text-right"><span class="stamp text-amber">待补</span></td>
+                    </tr>
+                    <tr class="border-b border-line/50">
+                      <td class="py-2.5 font-mono text-[11px] text-ink/35">03</td>
+                      <td class="py-2.5">夏日燃烧</td>
+                      <td class="py-2.5 font-mono text-[11px] text-ink/45">6:01</td>
+                      <td class="py-2.5 font-mono text-[10px] text-ink/35">标题缺失 · 轨号缺失</td>
+                      <td class="py-2.5 text-right"><span class="stamp text-amber">待补</span></td>
+                    </tr>
+                    <tr class="border-b border-line/50">
+                      <td class="py-2.5 font-mono text-[11px] text-ink/35">04</td>
+                      <td class="py-2.5">铁轨</td>
+                      <td class="py-2.5 font-mono text-[11px] text-ink/45">3:56</td>
+                      <td class="py-2.5 font-mono text-[10px] text-ink/35">标题缺失 · 轨号缺失</td>
+                      <td class="py-2.5 text-right"><span class="stamp text-amber">待补</span></td>
+                    </tr>
+                    <tr class="border-b border-line/50">
+                      <td class="py-2.5 font-mono text-[11px] text-ink/35">05</td>
+                      <td class="py-2.5 text-ink/35">—</td>
+                      <td class="py-2.5 font-mono text-[11px] text-ink/45">5:44</td>
+                      <td class="py-2.5 font-mono text-[10px] text-ink/35">标题缺失</td>
+                      <td class="py-2.5 text-right"><span class="stamp text-rust">需人工</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="mt-3 font-mono text-[9px] text-ink/35">仅显示前 5 条 · 共 9 条</p>
+            </div>
+
+            <div class="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5">
+              <p class="max-w-md font-mono text-[10px] leading-relaxed text-ink/40">选择候选后将生成字段级变更计划，预览确认后才写入文件。</p>
+              <button class="bg-ink px-6 py-3 font-mono text-[11px] tracking-[.18em] text-paper transition hover:bg-copper" data-goto="review">
+                生成变更计划 →
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 04 REVIEW ==================== -->
+      <section data-view-section="review" class="view hidden">
+        <div class="border-b border-line pb-6">
+          <p class="eyebrow">04 / REVIEW</p>
+          <h1 class="mt-3 font-display text-[clamp(2rem,4vw,3.2rem)] leading-none tracking-[-0.02em]">写入前，逐行过目。</h1>
+          <div class="mt-5 flex flex-wrap items-center gap-x-8 gap-y-2 font-mono text-[10px] text-ink/50">
+            <span><span class="text-ink">城市天气</span> — 甜梅号</span>
+            <span>12 个文件</span>
+            <span>68 个字段</span>
+            <span>3 个来源</span>
+            <span class="flex items-center gap-1.5 text-moss"><span class="h-1.5 w-1.5 rounded-full bg-moss"></span>备份已就绪</span>
+          </div>
+        </div>
+
+        <div class="mt-8 grid gap-8 xl:grid-cols-[1fr_300px]">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <h2 class="font-display text-2xl">字段差异</h2>
+                <span class="stamp text-ink/45">66 / 68 已选</span>
+              </div>
+              <div class="flex border border-line">
+                <button class="bg-ink px-3 py-2 font-mono text-[10px] tracking-[.12em] text-paper">仅补空</button>
+                <button class="px-3 py-2 font-mono text-[10px] tracking-[.12em] text-ink/50 transition hover:text-ink">总是覆盖</button>
+                <button class="px-3 py-2 font-mono text-[10px] tracking-[.12em] text-ink/50 transition hover:text-ink">全部</button>
+              </div>
+            </div>
+
+            <div class="mt-4 overflow-x-auto border border-line bg-[#fbf8f1]">
+              <table class="w-full min-w-[780px] text-left">
+                <thead>
+                  <tr class="border-b border-line">
+                    <th class="w-10 px-3 py-2.5"></th>
+                    <th class="eyebrow px-3 py-2.5 font-normal">TARGET</th>
+                    <th class="eyebrow px-3 py-2.5 font-normal">FIELD</th>
+                    <th class="eyebrow px-3 py-2.5 font-normal">CURRENT</th>
+                    <th class="w-6"></th>
+                    <th class="eyebrow px-3 py-2.5 font-normal">NEW</th>
+                    <th class="eyebrow px-3 py-2.5 text-right font-normal">SOURCE</th>
+                  </tr>
+                </thead>
+                <tbody class="text-[12px]">
+                  <tr class="border-b border-line/60 bg-paper2/40">
+                    <td colspan="7" class="px-3 py-1.5 font-mono text-[9px] tracking-[.2em] text-ink/40">专辑级 · 5 个字段</td>
+                  </tr>
+                  <tr class="border-b border-line/50">
+                    <td class="px-3 py-2.5"><input type="checkbox" checked class="h-3.5 w-3.5 accent-[#b8622d]"></td>
+                    <td class="px-3 py-2.5 font-mono text-[10px] text-ink/35">专辑</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">ALBUMARTIST</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px] text-ink/30">— 空</td>
+                    <td class="px-3 py-2.5 text-center text-copper">→</td>
+                    <td class="px-3 py-2.5 font-medium">甜梅号</td>
+                    <td class="px-3 py-2.5 text-right"><span class="stamp text-ink/45">MB</span></td>
+                  </tr>
+                  <tr class="border-b border-line/50">
+                    <td class="px-3 py-2.5"><input type="checkbox" checked class="h-3.5 w-3.5 accent-[#b8622d]"></td>
+                    <td class="px-3 py-2.5 font-mono text-[10px] text-ink/35">专辑</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">DATE</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px] text-ink/40 line-through">2011</td>
+                    <td class="px-3 py-2.5 text-center text-copper">→</td>
+                    <td class="px-3 py-2.5 font-medium">2010</td>
+                    <td class="px-3 py-2.5 text-right"><span class="stamp text-ink/45">MB</span></td>
+                  </tr>
+                  <tr class="border-b border-line/50">
+                    <td class="px-3 py-2.5"><input type="checkbox" checked class="h-3.5 w-3.5 accent-[#b8622d]"></td>
+                    <td class="px-3 py-2.5 font-mono text-[10px] text-ink/35">专辑</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">LABEL</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px] text-ink/30">— 空</td>
+                    <td class="px-3 py-2.5 text-center text-copper">→</td>
+                    <td class="px-3 py-2.5 font-medium">小白兔唱片</td>
+                    <td class="px-3 py-2.5 text-right"><span class="stamp text-ink/45">DC</span></td>
+                  </tr>
+                  <tr class="border-b border-line/50">
+                    <td class="px-3 py-2.5"><input type="checkbox" checked class="h-3.5 w-3.5 accent-[#b8622d]"></td>
+                    <td class="px-3 py-2.5 font-mono text-[10px] text-ink/35">专辑</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">CATALOGNUMBER</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px] text-ink/30">— 空</td>
+                    <td class="px-3 py-2.5 text-center text-copper">→</td>
+                    <td class="px-3 py-2.5 font-medium">RB-045</td>
+                    <td class="px-3 py-2.5 text-right"><span class="stamp text-ink/45">DC</span></td>
+                  </tr>
+                  <tr class="border-b border-line/50 opacity-45">
+                    <td class="px-3 py-2.5"><input type="checkbox" class="h-3.5 w-3.5 accent-[#b8622d]"></td>
+                    <td class="px-3 py-2.5 font-mono text-[10px] text-ink/35">专辑</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">GENRE</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">后摇滚</td>
+                    <td class="px-3 py-2.5 text-center text-ink/30">→</td>
+                    <td class="px-3 py-2.5 font-medium">后摇滚</td>
+                    <td class="px-3 py-2.5 text-right"><span class="stamp text-ink/45">NE</span></td>
+                  </tr>
+
+                  <tr class="border-b border-line/60 bg-paper2/40">
+                    <td colspan="7" class="px-3 py-1.5 font-mono text-[9px] tracking-[.2em] text-ink/40">曲目级 · 9 个文件 · 63 个字段</td>
+                  </tr>
+                  <tr class="border-b border-line/50">
+                    <td class="px-3 py-2.5"><input type="checkbox" checked class="h-3.5 w-3.5 accent-[#b8622d]"></td>
+                    <td class="px-3 py-2.5 font-mono text-[10px] text-ink/35">01</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">TITLE</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px] text-ink/30">— 空</td>
+                    <td class="px-3 py-2.5 text-center text-copper">→</td>
+                    <td class="px-3 py-2.5 font-medium">一个人的旅行</td>
+                    <td class="px-3 py-2.5 text-right"><span class="stamp text-ink/45">MB</span></td>
+                  </tr>
+                  <tr class="border-b border-line/50">
+                    <td class="px-3 py-2.5"><input type="checkbox" checked class="h-3.5 w-3.5 accent-[#b8622d]"></td>
+                    <td class="px-3 py-2.5 font-mono text-[10px] text-ink/35">01</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">TRACKNUMBER</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px] text-ink/30">— 空</td>
+                    <td class="px-3 py-2.5 text-center text-copper">→</td>
+                    <td class="px-3 py-2.5 font-medium">1</td>
+                    <td class="px-3 py-2.5 text-right"><span class="stamp text-ink/45">MB</span></td>
+                  </tr>
+                  <tr class="border-b border-line/50">
+                    <td class="px-3 py-2.5"><input type="checkbox" checked class="h-3.5 w-3.5 accent-[#b8622d]"></td>
+                    <td class="px-3 py-2.5 font-mono text-[10px] text-ink/35">01</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">ISRC</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px] text-ink/30">— 空</td>
+                    <td class="px-3 py-2.5 text-center text-copper">→</td>
+                    <td class="px-3 py-2.5 font-medium">TWAE31000101</td>
+                    <td class="px-3 py-2.5 text-right"><span class="stamp text-ink/45">MB</span></td>
+                  </tr>
+                  <tr class="border-b border-line/50">
+                    <td class="px-3 py-2.5"><input type="checkbox" checked class="h-3.5 w-3.5 accent-[#b8622d]"></td>
+                    <td class="px-3 py-2.5 font-mono text-[10px] text-ink/35">02</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">TITLE</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px] text-ink/30">— 空</td>
+                    <td class="px-3 py-2.5 text-center text-copper">→</td>
+                    <td class="px-3 py-2.5 font-medium">城市天气</td>
+                    <td class="px-3 py-2.5 text-right"><span class="stamp text-ink/45">MB</span></td>
+                  </tr>
+                  <tr class="border-b border-line/50 opacity-45">
+                    <td class="px-3 py-2.5"><input type="checkbox" class="h-3.5 w-3.5 accent-[#b8622d]"></td>
+                    <td class="px-3 py-2.5 font-mono text-[10px] text-ink/35">02</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">ARTIST</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">甜梅号</td>
+                    <td class="px-3 py-2.5 text-center text-ink/30">→</td>
+                    <td class="px-3 py-2.5 font-medium">甜梅号</td>
+                    <td class="px-3 py-2.5 text-right"><span class="stamp text-ink/45">—</span></td>
+                  </tr>
+                  <tr class="border-b border-line/50">
+                    <td class="px-3 py-2.5"><input type="checkbox" checked class="h-3.5 w-3.5 accent-[#b8622d]"></td>
+                    <td class="px-3 py-2.5 font-mono text-[10px] text-ink/35">03</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px]">TITLE</td>
+                    <td class="px-3 py-2.5 font-mono text-[11px] text-ink/30">— 空</td>
+                    <td class="px-3 py-2.5 text-center text-copper">→</td>
+                    <td class="px-3 py-2.5 font-medium">夏日燃烧</td>
+                    <td class="px-3 py-2.5 text-right"><span class="stamp text-ink/45">MB</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="mt-3 font-mono text-[9px] text-ink/35">已显示 12 / 68 行 · 行内双击可编辑新值</p>
+
+            <div class="mt-10">
+              <h2 class="font-display text-2xl">封面</h2>
+              <div class="mt-4 flex flex-wrap items-center gap-6 border border-line bg-[#fbf8f1] p-5">
+                <div class="text-center">
+                  <div class="flex h-24 w-24 items-center justify-center border border-dashed border-line font-mono text-[9px] text-ink/30">无封面</div>
+                  <p class="mt-2 font-mono text-[9px] text-ink/35">当前</p>
+                </div>
+                <span class="text-xl text-copper">→</span>
+                <div class="text-center">
+                  <img data-cover="city" data-size="square" alt="" class="h-24 w-24 border border-ink object-cover">
+                  <p class="mt-2 font-mono text-[9px] text-ink/35">1200×1200 · CAA</p>
+                </div>
+                <div class="min-w-[180px] flex-1">
+                  <p class="text-[13px] font-medium">Cover Art Archive</p>
+                  <p class="mt-1 font-mono text-[10px] leading-relaxed text-ink/40">将内嵌至 FLAC PICTURE 块<br>并写入 cover.jpg</p>
+                  <button class="stamp mt-3 py-2 transition hover:bg-ink hover:text-paper" data-open-cover>更换封面</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="space-y-4">
+            <div class="card p-5">
+              <div class="eyebrow">WRITE PLAN</div>
+              <div class="mt-4 space-y-2.5 font-mono text-[11px]">
+                <div class="leader"><span class="text-ink/40">文件</span><span class="dots"></span><span>12</span></div>
+                <div class="leader"><span class="text-ink/40">字段</span><span class="dots"></span><span>66</span></div>
+                <div class="leader"><span class="text-ink/40">封面</span><span class="dots"></span><span>1</span></div>
+                <div class="leader"><span class="text-ink/40">覆盖策略</span><span class="dots"></span><span>仅补空</span></div>
+                <div class="leader"><span class="text-ink/40">快照</span><span class="dots"></span><span class="text-moss">已生成</span></div>
+              </div>
+              <div class="mt-5 border-t border-line pt-4">
+                <p class="font-mono text-[9px] leading-relaxed text-ink/35">写入将串行执行，单文件失败不影响其余文件。完成后可随时回滚。</p>
+              </div>
+            </div>
+
+            <div class="border border-line p-5">
+              <div class="eyebrow">SOURCE MIX</div>
+              <div class="mt-4 space-y-2.5">
+                <div class="flex items-center gap-2 font-mono text-[10px]"><span class="w-8">MB</span><div class="h-1 flex-1 bg-line"><div class="h-full bg-ink" style="width:62%"></div></div><span class="text-ink/35">41</span></div>
+                <div class="flex items-center gap-2 font-mono text-[10px]"><span class="w-8">DC</span><div class="h-1 flex-1 bg-line"><div class="h-full bg-ink" style="width:26%"></div></div><span class="text-ink/35">17</span></div>
+                <div class="flex items-center gap-2 font-mono text-[10px]"><span class="w-8">NE</span><div class="h-1 flex-1 bg-line"><div class="h-full bg-amber" style="width:12%"></div></div><span class="text-ink/35">8</span></div>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="sticky bottom-4 z-30 mt-8 flex flex-wrap items-center gap-3 border border-ink bg-ink px-5 py-4 text-paper shadow-2xl">
+          <button class="font-mono text-[10px] tracking-[.16em] text-paper/50 transition hover:text-paper" data-goto="album">取消</button>
+          <div class="ml-auto flex items-center gap-4">
+            <span class="font-mono text-[10px] text-paper/50">已选 66 项 · 12 个文件</span>
+            <button id="applyBtn" class="bg-copper px-6 py-2.5 font-mono text-[11px] tracking-[.18em] text-paper transition hover:bg-paper hover:text-ink">确认并写入 →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 05 TASKS ==================== -->
+      <section data-view-section="tasks" class="view hidden">
+        <div class="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
+          <div>
+            <p class="eyebrow">05 / TASKS</p>
+            <h1 class="mt-3 font-display text-[clamp(2rem,4vw,3.2rem)] leading-none tracking-[-0.02em]">任务中心</h1>
+            <p class="mt-3 font-mono text-[11px] text-ink/45">扫描 1 · 检索 3 · 写入 1 · 全部持久化</p>
+          </div>
+          <button class="stamp py-2.5 transition hover:bg-ink hover:text-paper">+ 发起扫描</button>
+        </div>
+
+        <div class="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
+          <div class="card p-6">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="spinner"></span>
+                  <span class="eyebrow text-copper">RUNNING</span>
+                  <span class="font-mono text-[10px] text-ink/35">#J-2048</span>
+                </div>
+                <h2 class="mt-2 font-display text-2xl">扫描 /music/library</h2>
+                <p class="mt-1 font-mono text-[10px] text-ink/40">开始于 13:38 · 已运行 04:12 · 预计剩余 01:50</p>
+              </div>
+              <div class="flex gap-2">
+                <button class="border border-line px-4 py-2 font-mono text-[10px] tracking-[.16em] transition hover:border-ink">暂停</button>
+                <button class="border border-line px-4 py-2 font-mono text-[10px] tracking-[.16em] text-rust transition hover:border-rust">取消</button>
+              </div>
+            </div>
+
+            <div class="mt-6 flex gap-1">
+              <span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span>
+              <span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span>
+              <span class="seg soft"></span><span class="seg soft"></span><span class="seg soft"></span><span class="seg soft"></span>
+            </div>
+            <div class="mt-2 flex justify-between font-mono text-[10px] text-ink/45"><span>3,412 / 4,908 文件</span><span>69%</span></div>
+
+            <div class="mt-8 grid gap-8 sm:grid-cols-2">
+              <div>
+                <h3 class="eyebrow mb-3">STEP</h3>
+                <ol class="space-y-3 text-[12px]">
+                  <li class="flex items-center gap-2.5 text-ink/40">
+                    <svg class="h-3.5 w-3.5 text-moss" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                    遍历目录 <span class="ml-auto font-mono text-[9px]">00:41</span>
+                  </li>
+                  <li class="flex items-center gap-2.5">
+                    <span class="spinner"></span>
+                    解析标签与 CUE
+                    <span class="ml-auto font-mono text-[9px] text-copper">03:31</span>
+                  </li>
+                  <li class="flex items-center gap-2.5 text-ink/35">
+                    <span class="h-3.5 w-3.5 rounded-full border border-line"></span>
+                    生成目录指纹 <span class="ml-auto font-mono text-[9px]">—</span>
+                  </li>
+                  <li class="flex items-center gap-2.5 text-ink/35">
+                    <span class="h-3.5 w-3.5 rounded-full border border-line"></span>
+                    写入索引 <span class="ml-auto font-mono text-[9px]">—</span>
+                  </li>
+                </ol>
+              </div>
+              <div>
+                <h3 class="eyebrow mb-3">THROUGHPUT / 30S</h3>
+                <div class="flex h-24 items-end gap-1 border-b border-line pb-1">
+                  <span class="w-full bg-ink/15" style="height:22%"></span><span class="w-full bg-ink/15" style="height:31%"></span>
+                  <span class="w-full bg-ink/15" style="height:28%"></span><span class="w-full bg-ink/20" style="height:42%"></span>
+                  <span class="w-full bg-ink/20" style="height:38%"></span><span class="w-full bg-ink/25" style="height:51%"></span>
+                  <span class="w-full bg-ink/25" style="height:47%"></span><span class="w-full bg-ink/30" style="height:58%"></span>
+                  <span class="w-full bg-ink/30" style="height:62%"></span><span class="w-full bg-ink/35" style="height:55%"></span>
+                  <span class="w-full bg-copper/60" style="height:71%"></span><span class="w-full bg-copper/70" style="height:66%"></span>
+                </div>
+                <div class="mt-2 flex justify-between font-mono text-[9px] text-ink/35"><span>-6m</span><span>now</span></div>
+                <p class="mt-3 font-mono text-[10px] text-ink/45">平均 17.4 文件/秒</p>
+              </div>
+            </div>
+          </div>
+
+          <aside class="space-y-4">
+            <div class="border border-line p-5">
+              <div class="eyebrow">QUEUE</div>
+              <div class="mt-3 space-y-3">
+                <div class="flex items-start gap-2">
+                  <span class="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-amber"></span>
+                  <div class="min-w-0">
+                    <p class="text-[12px]">匹配 城市天气</p>
+                    <p class="mt-0.5 font-mono text-[9px] text-ink/35">WAITING · 甜梅号</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2">
+                  <span class="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-amber"></span>
+                  <div class="min-w-0">
+                    <p class="text-[12px]">写入 Kind of Blue</p>
+                    <p class="mt-0.5 font-mono text-[9px] text-ink/35">WAITING · 5 文件</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="border border-line p-5">
+              <div class="eyebrow">CONCURRENCY</div>
+              <div class="mt-3 space-y-2 font-mono text-[10px]">
+                <div class="leader"><span class="text-ink/40">扫描</span><span class="dots"></span><span>1 / 1</span></div>
+                <div class="leader"><span class="text-ink/40">远程检索</span><span class="dots"></span><span>3 / 3</span></div>
+                <div class="leader"><span class="text-ink/40">写入</span><span class="dots"></span><span>0 / 1</span></div>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="mt-10">
+          <h2 class="font-display text-2xl">任务历史</h2>
+          <div class="mt-4 overflow-x-auto border-t border-line">
+            <table class="w-full min-w-[720px] text-left">
+              <thead>
+                <tr class="border-b border-line/70">
+                  <th class="eyebrow py-2 font-normal">JOB</th>
+                  <th class="eyebrow py-2 font-normal">TYPE</th>
+                  <th class="eyebrow py-2 font-normal">TARGET</th>
+                  <th class="eyebrow py-2 font-normal">DURATION</th>
+                  <th class="eyebrow py-2 font-normal">RESULT</th>
+                  <th class="eyebrow py-2 text-right font-normal">WHEN</th>
+                </tr>
+              </thead>
+              <tbody class="font-mono text-[11px] text-ink/60">
+                <tr class="border-b border-line/50">
+                  <td class="py-3 text-ink/35">#J-2047</td><td class="py-3">apply</td>
+                  <td class="py-3 font-sans text-[13px] text-ink">城市天气 · 12 文件</td>
+                  <td class="py-3">00:38</td>
+                  <td class="py-3"><span class="stamp text-moss">成功</span></td>
+                  <td class="py-3 text-right text-ink/35">13:42</td>
+                </tr>
+                <tr class="border-b border-line/50">
+                  <td class="py-3 text-ink/35">#J-2046</td><td class="py-3">apply</td>
+                  <td class="py-3 font-sans text-[13px] text-ink">Kind of Blue · 5 文件</td>
+                  <td class="py-3">00:19</td>
+                  <td class="py-3"><span class="stamp text-moss">成功</span></td>
+                  <td class="py-3 text-right text-ink/35">11:08</td>
+                </tr>
+                <tr class="border-b border-line/50">
+                  <td class="py-3 text-ink/35">#J-2044</td><td class="py-3">rollback</td>
+                  <td class="py-3 font-sans text-[13px] text-ink">The Köln Concert</td>
+                  <td class="py-3">00:06</td>
+                  <td class="py-3"><span class="stamp text-ink/45">已回滚</span></td>
+                  <td class="py-3 text-right text-ink/35">昨天</td>
+                </tr>
+                <tr class="border-b border-line/50">
+                  <td class="py-3 text-ink/35">#J-2041</td><td class="py-3">scan</td>
+                  <td class="py-3 font-sans text-[13px] text-ink">/volume2/classical</td>
+                  <td class="py-3">03:12</td>
+                  <td class="py-3"><span class="stamp text-rust">2 失败</span></td>
+                  <td class="py-3 text-right text-ink/35">昨天</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 06 HISTORY ==================== -->
+      <section data-view-section="history" class="view hidden">
+        <div class="border-b border-line pb-6">
+          <p class="eyebrow">06 / HISTORY</p>
+          <h1 class="mt-3 font-display text-[clamp(2rem,4vw,3.2rem)] leading-none tracking-[-0.02em]">历史与回滚</h1>
+          <p class="mt-3 font-mono text-[11px] text-ink/45">每次写入都有快照 · 备份占用 1.2 GB · 保留最近 20 批次</p>
+        </div>
+
+        <div class="mt-8 grid gap-8 lg:grid-cols-[1fr_300px]">
+          <div>
+            <div class="flex items-center justify-between">
+              <h2 class="font-display text-2xl">写入批次</h2>
+              <div class="flex gap-1">
+                <button class="stamp bg-ink px-3 py-2 text-paper">全部</button>
+                <button class="stamp px-3 py-2 text-ink/50 hover:border-ink">可回滚</button>
+                <button class="stamp px-3 py-2 text-ink/50 hover:border-ink">已回滚</button>
+              </div>
+            </div>
+
+            <div class="mt-4 space-y-3">
+              <div class="border border-line bg-[#fbf8f1] p-5">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                  <div class="flex items-start gap-4">
+                    <img data-cover="city" alt="" class="h-14 w-14 border border-line object-cover">
+                    <div>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="font-display text-lg">城市天气 — 甜梅号</h3>
+                        <span class="stamp text-moss">可回滚</span>
+                      </div>
+                      <p class="mt-1 font-mono text-[10px] text-ink/45">12 文件 · 68 字段 · MB + Discogs + NE</p>
+                      <p class="mt-1 font-mono text-[9px] text-ink/30">2026-11-16 13:42 · 批次 #B-0091 · 快照 38.4 MB</p>
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <button class="stamp py-2 text-ink/55 transition hover:border-ink hover:text-ink">查看差异</button>
+                    <button class="stamp py-2 text-rust transition hover:bg-rust hover:text-paper" data-rollback="城市天气 · 12 个文件">回滚</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="border border-line p-5">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                  <div class="flex items-start gap-4">
+                    <img data-cover="blue" alt="" class="h-14 w-14 border border-line object-cover">
+                    <div>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="font-display text-lg">Kind of Blue — Miles Davis</h3>
+                        <span class="stamp text-moss">可回滚</span>
+                      </div>
+                      <p class="mt-1 font-mono text-[10px] text-ink/45">5 文件 · 31 字段 · MusicBrainz</p>
+                      <p class="mt-1 font-mono text-[9px] text-ink/30">2026-11-16 11:08 · 批次 #B-0090 · 快照 12.1 MB</p>
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <button class="stamp py-2 text-ink/55 transition hover:border-ink hover:text-ink">查看差异</button>
+                    <button class="stamp py-2 text-rust transition hover:bg-rust hover:text-paper" data-rollback="Kind of Blue · 5 个文件">回滚</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="border border-line p-5 opacity-65">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                  <div class="flex items-start gap-4">
+                    <img data-cover="piano" alt="" class="h-14 w-14 border border-line object-cover">
+                    <div>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="font-display text-lg">The Köln Concert — Keith Jarrett</h3>
+                        <span class="stamp text-ink/45">已回滚</span>
+                      </div>
+                      <p class="mt-1 font-mono text-[10px] text-ink/45">1 文件 · 9 字段 · Discogs</p>
+                      <p class="mt-1 font-mono text-[9px] text-ink/30">2026-11-15 22:10 · 批次 #B-0089 · 回滚于 22:31</p>
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <button class="stamp py-2 text-ink/40">查看差异</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="border border-line p-5">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                  <div class="flex items-start gap-4">
+                    <img data-cover="suzhou" alt="" class="h-14 w-14 border border-line object-cover">
+                    <div>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="font-display text-lg">青蛇 · 电影原声</h3>
+                        <span class="stamp text-moss">可回滚</span>
+                      </div>
+                      <p class="mt-1 font-mono text-[10px] text-ink/45">12 文件 · 44 字段 · 网易云</p>
+                      <p class="mt-1 font-mono text-[9px] text-ink/30">2026-11-14 19:02 · 批次 #B-0087 · 快照 21.8 MB</p>
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <button class="stamp py-2 text-ink/55 transition hover:border-ink hover:text-ink">查看差异</button>
+                    <button class="stamp py-2 text-rust transition hover:bg-rust hover:text-paper" data-rollback="青蛇 · 12 个文件">回滚</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="space-y-4">
+            <div class="card p-5">
+              <div class="eyebrow">BACKUP STORAGE</div>
+              <div class="mt-3 font-display text-4xl">1.2<span class="ml-1 text-lg">GB</span></div>
+              <div class="mt-3 h-1.5 bg-line"><div class="h-full bg-ink" style="width:34%"></div></div>
+              <div class="mt-2 flex justify-between font-mono text-[9px] text-ink/35"><span>已用 34%</span><span>上限 20 批</span></div>
+            </div>
+            <div class="border border-line p-5">
+              <div class="eyebrow">SNAPSHOT CONTENT</div>
+              <ul class="mt-3 space-y-2 font-mono text-[10px] text-ink/50">
+                <li class="flex gap-2"><span class="text-copper">·</span>完整原生标签（含 TXXX）</li>
+                <li class="flex gap-2"><span class="text-copper">·</span>内嵌图片二进制</li>
+                <li class="flex gap-2"><span class="text-copper">·</span>文件 size / mtime</li>
+                <li class="flex gap-2"><span class="text-copper">·</span>快照哈希校验</li>
+              </ul>
+            </div>
+            <div class="border border-line p-5">
+              <div class="eyebrow">RETENTION</div>
+              <p class="mt-3 font-mono text-[10px] leading-relaxed text-ink/40">默认保留最近 20 个批次或 90 天，清理不会删除仍处于「可回滚」的最新批次。</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ==================== 07 SETTINGS ==================== -->
+      <section data-view-section="settings" class="view hidden">
+        <div class="border-b border-line pb-6">
+          <p class="eyebrow">07 / SETTINGS</p>
+          <h1 class="mt-3 font-display text-[clamp(2rem,4vw,3.2rem)] leading-none tracking-[-0.02em]">设置</h1>
+          <p class="mt-3 font-mono text-[11px] text-ink/45">媒体库 · 写入策略 · 数据源 · 安全</p>
+        </div>
+
+        <div class="mt-8 grid gap-8 lg:grid-cols-[1fr_300px]">
+          <div class="space-y-8">
+            <section>
+              <div class="flex items-center justify-between">
+                <h2 class="font-display text-2xl">媒体库根目录</h2>
+                <button class="stamp py-2 transition hover:bg-ink hover:text-paper">+ 添加根目录</button>
+              </div>
+              <div class="mt-4 divide-y divide-line border border-line bg-[#fbf8f1]">
+                <div class="flex flex-wrap items-center gap-4 p-4">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2">
+                      <p class="font-mono text-[12px]">/music/library</p>
+                      <span class="stamp text-moss">启用</span>
+                    </div>
+                    <p class="mt-1 font-mono text-[9px] text-ink/35">4,120 文件 · 上次扫描 13:38 · 只读挂载</p>
+                  </div>
+                  <button class="border border-line px-3 py-1.5 font-mono text-[10px] transition hover:border-ink">重新扫描</button>
+                  <button class="h-5 w-9 rounded-full bg-ink p-0.5"><span class="ml-auto block h-4 w-4 rounded-full bg-paper"></span></button>
+                </div>
+                <div class="flex flex-wrap items-center gap-4 p-4">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2">
+                      <p class="font-mono text-[12px]">/volume2/classical</p>
+                      <span class="stamp text-moss">启用</span>
+                    </div>
+                    <p class="mt-1 font-mono text-[9px] text-ink/35">788 文件 · 上次扫描 昨天 21:04 · 只读挂载</p>
+                  </div>
+                  <button class="border border-line px-3 py-1.5 font-mono text-[10px] transition hover:border-ink">重新扫描</button>
+                  <button class="h-5 w-9 rounded-full bg-ink p-0.5"><span class="ml-auto block h-4 w-4 rounded-full bg-paper"></span></button>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h2 class="font-display text-2xl">写入策略</h2>
+              <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <div class="border border-line bg-[#fbf8f1] p-4">
+                  <div class="eyebrow">FIELD POLICY</div>
+                  <div class="mt-3 space-y-2 text-[12px]">
+                    <label class="flex items-center gap-2"><input type="radio" name="field" checked class="accent-[#b8622d]">仅补空字段</label>
+                    <label class="flex items-center gap-2"><input type="radio" name="field" class="accent-[#b8622d]">总是覆盖</label>
+                    <label class="flex items-center gap-2"><input type="radio" name="field" class="accent-[#b8622d]">全部生成差异</label>
+                  </div>
+                </div>
+                <div class="border border-line bg-[#fbf8f1] p-4">
+                  <div class="eyebrow">COVER POLICY</div>
+                  <div class="mt-3 space-y-2 text-[12px]">
+                    <label class="flex items-center gap-2"><input type="radio" name="cover" class="accent-[#b8622d]">仅在缺失时写入</label>
+                    <label class="flex items-center gap-2"><input type="radio" name="cover" checked class="accent-[#b8622d]">总是覆盖</label>
+                    <label class="flex items-center gap-2"><input type="radio" name="cover" class="accent-[#b8622d]">从不覆盖已有封面</label>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-4 flex items-start gap-3 border border-line p-4">
+                <button class="mt-0.5 h-5 w-9 flex-none rounded-full bg-line p-0.5"><span class="block h-4 w-4 rounded-full bg-paper border border-line"></span></button>
+                <div>
+                  <p class="text-[12px] font-medium">安全模式：先复制再写入</p>
+                  <p class="mt-1 font-mono text-[9px] leading-relaxed text-ink/40">默认关闭。开启后写入前复制原文件，风险更低但占用额外磁盘。</p>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <div class="flex items-center justify-between">
+                <h2 class="font-display text-2xl">数据源</h2>
+                <span class="font-mono text-[9px] text-ink/35">限流由令牌桶统一调度</span>
+              </div>
+              <div class="mt-4 divide-y divide-line border border-line bg-[#fbf8f1]">
+                <div class="flex flex-wrap items-center gap-3 p-4">
+                  <span class="stamp w-12 justify-center text-ink/60">MB</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[13px] font-medium">MusicBrainz</p>
+                    <p class="mt-0.5 font-mono text-[9px] text-ink/35">1 req/s · 无需凭据 · 缓存 7 天</p>
+                  </div>
+                  <span class="stamp text-moss">已启用</span>
+                  <button class="h-5 w-9 rounded-full bg-ink p-0.5"><span class="ml-auto block h-4 w-4 rounded-full bg-paper"></span></button>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 p-4">
+                  <span class="stamp w-12 justify-center text-ink/60">AC</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[13px] font-medium">AcoustID</p>
+                    <p class="mt-0.5 font-mono text-[9px] text-ink/35">3 req/s · key sk_••••••4f2a · 缓存 90 天</p>
+                  </div>
+                  <span class="stamp text-moss">已启用</span>
+                  <button class="h-5 w-9 rounded-full bg-ink p-0.5"><span class="ml-auto block h-4 w-4 rounded-full bg-paper"></span></button>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 p-4">
+                  <span class="stamp w-12 justify-center text-ink/60">DC</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[13px] font-medium">Discogs</p>
+                    <p class="mt-0.5 font-mono text-[9px] text-ink/35">60 req/min · token dsc_••••••91c · 缓存 7 天</p>
+                  </div>
+                  <span class="stamp text-moss">已启用</span>
+                  <button class="h-5 w-9 rounded-full bg-ink p-0.5"><span class="ml-auto block h-4 w-4 rounded-full bg-paper"></span></button>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 p-4">
+                  <span class="stamp w-12 justify-center text-ink/60">SP</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[13px] font-medium">Spotify</p>
+                    <p class="mt-0.5 font-mono text-[9px] text-ink/35">Client Credentials · 429 自动退避 · 缓存 7 天</p>
+                  </div>
+                  <span class="stamp text-moss">已启用</span>
+                  <button class="h-5 w-9 rounded-full bg-ink p-0.5"><span class="ml-auto block h-4 w-4 rounded-full bg-paper"></span></button>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 bg-paper2/40 p-4">
+                  <span class="stamp w-12 justify-center text-ink/60">NE</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[13px] font-medium">网易云 / QQ 音乐</p>
+                    <p class="mt-0.5 font-mono text-[9px] text-rust">非官方接口 · 默认关闭 · 需自备 Cookie</p>
+                  </div>
+                  <span class="stamp text-ink/45">已停用</span>
+                  <button class="h-5 w-9 rounded-full bg-line p-0.5"><span class="block h-4 w-4 rounded-full border border-line bg-paper"></span></button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <aside class="space-y-4">
+            <div class="card p-5">
+              <div class="eyebrow">SYSTEM</div>
+              <div class="mt-4 space-y-2.5 font-mono text-[10px]">
+                <div class="leader"><span class="text-ink/40">版本</span><span class="dots"></span><span>v0.1.0</span></div>
+                <div class="leader"><span class="text-ink/40">数据库</span><span class="dots"></span><span>SQLite · WAL</span></div>
+                <div class="leader"><span class="text-ink/40">fpcalc</span><span class="dots"></span><span class="text-moss">可用</span></div>
+                <div class="leader"><span class="text-ink/40">日志级别</span><span class="dots"></span><span>info</span></div>
+                <div class="leader"><span class="text-ink/40">时区</span><span class="dots"></span><span>Asia/Shanghai</span></div>
+              </div>
+            </div>
+            <div class="border border-line p-5">
+              <div class="eyebrow">SECRET KEY</div>
+              <p class="mt-3 break-all font-mono text-[10px] text-ink/45">••••••••••••••••••••••••</p>
+              <p class="mt-2 font-mono text-[9px] leading-relaxed text-ink/35">用于 Fernet 加密数据源凭据，存于环境变量 SECRET_KEY。</p>
+            </div>
+            <div class="border border-rust/40 bg-[#fbf8f1] p-5">
+              <div class="eyebrow text-rust">COMPLIANCE</div>
+              <p class="mt-3 font-mono text-[10px] leading-relaxed text-ink/45">网易云 / QQ 适配器通过非官方接口实现，可能随时失效。启用即表示自行承担合规与稳定性风险。</p>
+            </div>
+            <button id="saveSettings" class="w-full bg-ink py-3 font-mono text-[11px] tracking-[.18em] text-paper transition hover:bg-copper">保存设置</button>
+          </aside>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="border-t border-line px-5 py-6 sm:px-8">
+      <div class="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-2 font-mono text-[9px] tracking-[.14em] text-ink/30">
+        <span>MUSIC·SCRAP / UI PROTOTYPE</span>
+        <span>2026-11-16 · v0.1 · ALL WRITES ARE REVERSIBLE</span>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ BATCH BAR ============ -->
+<div id="batchBar" class="fixed bottom-6 left-1/2 z-40 hidden -translate-x-1/2 items-center gap-5 border border-ink bg-ink px-5 py-3 text-paper shadow-2xl lg:left-[calc(50%+124px)]">
+  <span class="font-mono text-[10px] tracking-[.14em]"><span id="batchCount">0</span> 张专辑已选</span>
+  <span class="h-4 w-px bg-paper/20"></span>
+  <button class="font-mono text-[10px] tracking-[.14em] text-paper/60 transition hover:text-paper" id="clearBatch">清除</button>
+  <button class="bg-copper px-4 py-2 font-mono text-[10px] tracking-[.14em] transition hover:bg-paper hover:text-ink" data-goto="tasks">批量匹配 →</button>
+</div>
+
+<!-- ============ MODAL ============ -->
+<div id="modal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-ink/60 p-5 backdrop-blur-sm">
+  <div class="w-full max-w-lg border border-ink bg-paper shadow-2xl">
+    <div class="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
+      <div>
+        <p id="modalKicker" class="eyebrow">CONFIRM</p>
+        <h3 id="modalTitle" class="mt-1 font-display text-2xl leading-tight">确认</h3>
+      </div>
+      <button id="modalClose" class="p-1 text-ink/40 transition hover:text-ink" aria-label="关闭">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 18 18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="modalBody" class="px-6 py-5 text-[13px] leading-relaxed text-ink/65"></div>
+    <div class="flex justify-end gap-2 border-t border-line px-6 py-4">
+      <button id="modalCancel" class="border border-line px-4 py-2 font-mono text-[10px] tracking-[.16em] transition hover:border-ink">取消</button>
+      <button id="modalConfirm" class="bg-ink px-5 py-2 font-mono text-[10px] tracking-[.16em] text-paper transition hover:bg-copper">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TOAST ============ -->
+<div id="toast" class="pointer-events-none fixed bottom-8 right-6 z-[95] translate-y-2 border border-ink bg-ink px-4 py-3 font-mono text-[10px] tracking-[.12em] text-paper opacity-0 shadow-2xl transition-all duration-300"></div>
+
+<script>
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+/* ---------- generated sleeve artwork (self-contained SVG) ---------- */
+const coverArt = {
+  blue: `
+    <rect width="800" height="800" fill="#101d28"/>
+    <circle cx="556" cy="270" r="186" fill="#e9e3d6"/>
+    <circle cx="556" cy="270" r="186" fill="none" stroke="#b8622d" stroke-width="2" stroke-dasharray="2 9"/>
+    <path d="M64 120v400" stroke="#e9e3d6" stroke-width="1" opacity=".25"/>
+    <rect x="462" y="540" width="250" height="6" fill="#b8622d"/>
+    <rect x="462" y="566" width="164" height="3" fill="#e9e3d6" opacity=".45"/>
+    <g fill="#e9e3d6" font-family="IBM Plex Mono, monospace" font-size="22" letter-spacing="5">
+      <text x="64" y="690">MILES DAVIS</text>
+      <text x="64" y="724" opacity=".45">BLUE / 1959</text>
+    </g>`,
+  piano: `
+    <rect width="800" height="800" fill="#efe9dc"/>
+    <g stroke="#14150f" opacity=".12">
+      <path d="M120 250h560"/><path d="M120 310h560"/><path d="M120 370h560"/><path d="M120 430h560"/>
+    </g>
+    <path d="M120 640C250 380 420 220 690 158" stroke="#14150f" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <circle cx="690" cy="158" r="10" fill="#b8622d"/>
+    <g fill="#14150f" font-family="IBM Plex Mono, monospace" font-size="22" letter-spacing="5">
+      <text x="120" y="700">KEITH JARRETT</text>
+      <text x="120" y="734" opacity=".45">KÖLN / 1975</text>
+    </g>`,
+  city: `
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#2b4a52"/><stop offset="1" stop-color="#7d4a33"/>
+      </linearGradient>
+    </defs>
+    <rect width="800" height="800" fill="url(#g)"/>
+    <circle cx="582" cy="222" r="118" fill="#e9e3d6" opacity=".9"/>
+    <g fill="#14150f" opacity=".5">
+      <rect x="86" y="470" width="92" height="330"/>
+      <rect x="198" y="386" width="72" height="414"/>
+      <rect x="290" y="520" width="122" height="280"/>
+      <rect x="432" y="436" width="82" height="364"/>
+      <rect x="534" y="556" width="140" height="244"/>
+    </g>
+    <g stroke="#e9e3d6" opacity=".22">
+      <path d="M0 600h800"/><path d="M0 644h800"/><path d="M0 688h800"/>
+    </g>
+    <g fill="#efe9dc" font-family="IBM Plex Mono, monospace" font-size="22" letter-spacing="5">
+      <text x="86" y="196">SUGAR PLUM FERRY</text>
+      <text x="86" y="230" opacity=".55">城市天气 / 2010</text>
+    </g>`,
+  prism: `
+    <rect width="800" height="800" fill="#0c0c0c"/>
+    <polygon points="400,150 618,640 182,640" fill="none" stroke="#e9e3d6" stroke-width="2"/>
+    <polygon points="400,150 618,640 470,640" fill="#e9e3d6" opacity=".06"/>
+    <g opacity=".5">
+      <polygon points="468,300 800,214 800,282 486,352" fill="#d99a4e"/>
+      <polygon points="478,352 800,330 800,392 492,400" fill="#6f8f6a"/>
+      <polygon points="484,400 800,446 800,506 490,444" fill="#a4412f"/>
+    </g>
+    <g fill="#e9e3d6" font-family="IBM Plex Mono, monospace" font-size="22" letter-spacing="5">
+      <text x="64" y="700">PINK FLOYD</text>
+      <text x="64" y="734" opacity=".45">DARK SIDE / 1973</text>
+    </g>`,
+  suzhou: `
+    <rect width="800" height="800" fill="#1d2e26"/>
+    <circle cx="180" cy="170" r="150" fill="#e9e3d6" opacity=".06"/>
+    <circle cx="640" cy="470" r="230" fill="#e9e3d6" opacity=".05"/>
+    <path d="M110 640C250 430 330 716 470 486S660 262 706 218" stroke="#b8622d" stroke-width="24" fill="none" stroke-linecap="round" opacity=".92"/>
+    <path d="M110 640C250 430 330 716 470 486S660 262 706 218" stroke="#e9e3d6" stroke-width="2" fill="none" stroke-dasharray="3 12" opacity=".55"/>
+    <g fill="#e9e3d6" font-family="IBM Plex Mono, monospace" font-size="22" letter-spacing="5">
+      <text x="72" y="700">青蛇 · 原声</text>
+      <text x="72" y="734" opacity=".45">JADE / 1993</text>
+    </g>`,
+  jazz: `
+    <rect width="800" height="800" fill="#e7dcc6"/>
+    <rect x="88" y="132" width="296" height="376" fill="#1f3552"/>
+    <circle cx="520" cy="330" r="148" fill="#c08a3e"/>
+    <circle cx="520" cy="330" r="148" fill="none" stroke="#14150f" stroke-width="2"/>
+    <g fill="#14150f" opacity=".45">
+      <circle cx="112" cy="570" r="4"/><circle cx="140" cy="570" r="4"/><circle cx="168" cy="570" r="4"/><circle cx="196" cy="570" r="4"/>
+      <circle cx="112" cy="598" r="4"/><circle cx="140" cy="598" r="4"/><circle cx="168" cy="598" r="4"/>
+      <circle cx="112" cy="626" r="4"/><circle cx="140" cy="626" r="4"/>
+    </g>
+    <path d="M88 548h624" stroke="#14150f" stroke-width="2"/>
+    <g fill="#14150f" font-family="IBM Plex Mono, monospace" font-size="22" letter-spacing="5">
+      <text x="88" y="700">JOHN COLTRANE</text>
+      <text x="88" y="734" opacity=".45">BLUE TRAIN / 1958</text>
+    </g>`,
+  loveless: `
+    <defs>
+      <radialGradient id="a"><stop stop-color="#e06a9a" stop-opacity=".85"/><stop offset="1" stop-color="#e06a9a" stop-opacity="0"/></radialGradient>
+      <radialGradient id="b"><stop stop-color="#8a5ce0" stop-opacity=".55"/><stop offset="1" stop-color="#8a5ce0" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="800" height="800" fill="#1a0f16"/>
+    <circle cx="290" cy="300" r="320" fill="url(#a)"/>
+    <circle cx="580" cy="530" r="300" fill="url(#b)"/>
+    <g stroke="#e9e3d6" opacity=".14">
+      <path d="M0 210h800"/><path d="M0 250h800"/><path d="M0 290h800"/>
+    </g>
+    <g fill="#efe9dc" font-family="IBM Plex Mono, monospace" font-size="20" letter-spacing="4">
+      <text x="64" y="690">MY BLOODY VALENTINE</text>
+      <text x="64" y="724" opacity=".55">LOVELESS / 1991</text>
+    </g>`,
+  moon: `
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#16232e"/><stop offset="1" stop-color="#4b5a63"/>
+      </linearGradient>
+    </defs>
+    <rect width="800" height="800" fill="url(#g)"/>
+    <circle cx="542" cy="246" r="148" fill="#efe9dc" opacity=".92"/>
+    <g stroke="#efe9dc" opacity=".16">
+      <path d="M178 0v800"/><path d="M218 0v800"/><path d="M258 0v800"/><path d="M298 0v800"/>
+    </g>
+    <path d="M0 640h800" stroke="#efe9dc" opacity=".3"/>
+    <g fill="#efe9dc" font-family="IBM Plex Mono, monospace" font-size="22" letter-spacing="5">
+      <text x="64" y="700">李泉</text>
+      <text x="64" y="734" opacity=".5">MOON / 2003</text>
+    </g>`
+};
+
+const grain = `<filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="800" height="800" filter="url(#grain)" opacity=".05"/>`;
+
+function coverArtUri(key) {
+  const body = coverArt[key] || coverArt.city;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">${body}${grain}</svg>`;
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+
+$$("img[data-cover]").forEach(img => {
+  img.src = coverArtUri(img.dataset.cover);
+});
+
+/* ---------- view routing ---------- */
+const crumbs = {
+  overview: "OVERVIEW", albums: "LIBRARY", album: "RELEASE",
+  review: "REVIEW", tasks: "TASKS", history: "HISTORY", settings: "SETTINGS"
+};
+
+function go(name, push = true) {
+  $$("[data-view-section]").forEach(s => {
+    s.classList.toggle("hidden", s.dataset.viewSection !== name);
+  });
+  $$(".nav-item").forEach(n => n.classList.toggle("is-active", n.dataset.goto === name));
+  const crumb = $("#crumb");
+  if (crumb) crumb.textContent = crumbs[name] || name.toUpperCase();
+  window.scrollTo({ top: 0, behavior: "instant" });
+  if (push && location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
+  closeSidebar();
+}
+
+document.addEventListener("click", e => {
+  const trigger = e.target.closest("[data-goto]");
+  if (trigger) {
+    e.preventDefault();
+    go(trigger.dataset.goto);
+  }
+});
+
+window.addEventListener("hashchange", () => {
+  const name = location.hash.replace("#", "");
+  if (crumbs[name]) go(name, false);
+});
+
+/* ---------- sidebar ---------- */
+const sidebar = $("#sidebar");
+function openSidebar() { sidebar.classList.remove("-translate-x-full"); }
+function closeSidebar() { if (window.innerWidth < 1024) sidebar.classList.add("-translate-x-full"); }
+$("#menuBtn").addEventListener("click", () => {
+  sidebar.classList.contains("-translate-x-full") ? openSidebar() : closeSidebar();
+});
+
+/* ---------- search ---------- */
+$("#globalSearch").addEventListener("input", e => {
+  const q = e.target.value.trim().toLowerCase();
+  $$("#albumGrid [data-title]").forEach(card => {
+    const hay = (card.dataset.title + " " + card.dataset.artist).toLowerCase();
+    card.classList.toggle("hidden", Boolean(q) && !hay.includes(q));
+  });
+  if (q) go("albums");
+});
+
+/* ---------- selection ---------- */
+function updateBatch() {
+  const n = $$(".album-check:checked").length;
+  $("#batchCount").textContent = n;
+  const bar = $("#batchBar");
+  bar.classList.toggle("hidden", n === 0);
+  bar.classList.toggle("flex", n > 0);
+}
+document.addEventListener("change", e => {
+  if (e.target.classList.contains("album-check")) updateBatch();
+});
+$("#clearBatch").addEventListener("click", () => {
+  $$(".album-check").forEach(c => { c.checked = false; });
+  updateBatch();
+});
+
+/* ---------- filters (visual only) ---------- */
+$$(".filter-chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    const group = chip.parentElement;
+    $$(".filter-chip", group).forEach(c => {
+      c.classList.remove("border-ink", "bg-ink", "text-paper");
+      if (!c.classList.contains("border-transparent")) c.classList.add("border-transparent", "text-ink/55");
+    });
+    chip.classList.remove("border-transparent", "text-ink/55");
+    chip.classList.add("border-ink", "bg-ink", "text-paper");
+  });
+});
+
+/* ---------- toast ---------- */
+let toastTimer;
+function toast(message) {
+  const el = $("#toast");
+  el.textContent = message;
+  el.classList.remove("opacity-0", "translate-y-2");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add("opacity-0", "translate-y-2"), 3200);
+}
+
+/* ---------- modal ---------- */
+let onConfirm = null;
+function openModal({ kicker = "CONFIRM", title, body, confirmText = "确认", danger = false, handler }) {
+  $("#modalKicker").textContent = kicker;
+  $("#modalTitle").textContent = title;
+  $("#modalBody").innerHTML = body;
+  const btn = $("#modalConfirm");
+  btn.textContent = confirmText;
+  btn.className = danger
+    ? "bg-rust px-5 py-2 font-mono text-[10px] tracking-[.16em] text-paper transition hover:bg-ink"
+    : "bg-ink px-5 py-2 font-mono text-[10px] tracking-[.16em] text-paper transition hover:bg-copper";
+  onConfirm = handler || null;
+  $("#modal").classList.remove("hidden");
+  $("#modal").classList.add("flex");
+}
+function closeModal() {
+  $("#modal").classList.add("hidden");
+  $("#modal").classList.remove("flex");
+}
+$("#modalClose").addEventListener("click", closeModal);
+$("#modalCancel").addEventListener("click", closeModal);
+$("#modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
+$("#modalConfirm").addEventListener("click", () => {
+  if (onConfirm) onConfirm();
+  else closeModal();
+});
+
+$("#applyBtn").addEventListener("click", () => {
+  openModal({
+    kicker: "WRITE / CONFIRM",
+    title: "写入 12 个文件？",
+    body: `
+      <p>将向 <span class="font-mono text-ink">城市天气 — 甜梅号</span> 的 12 个文件写入 66 个字段与 1 张封面。</p>
+      <div class="mt-4 space-y-2 border-t border-line pt-3 font-mono text-[10px] text-ink/50">
+        <div class="leader"><span>覆盖策略</span><span class="dots"></span><span>仅补空</span></div>
+        <div class="leader"><span>写入前快照</span><span class="dots"></span><span class="text-moss">已就绪 · 38.4 MB</span></div>
+        <div class="leader"><span>写入方式</span><span class="dots"></span><span>串行 · 写后校验</span></div>
+      </div>
+      <p class="mt-4 text-[11px] text-ink/40">写入开始后可在任务中心查看进度，完成后可随时回滚。</p>`,
+    confirmText: "确认写入",
+    handler: () => {
+      closeModal();
+      toast("写入任务已创建 · 可在任务中心查看进度");
+      go("tasks");
+    }
+  });
+});
+
+$$("[data-rollback]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    openModal({
+      kicker: "ROLLBACK / CONFIRM",
+      title: "回滚这批写入？",
+      body: `
+        <p>将把 <span class="font-mono text-ink">${btn.dataset.rollback}</span> 的标签与封面还原到写入前的快照。</p>
+        <p class="mt-3 font-mono text-[10px] leading-relaxed text-rust">回滚会覆盖此后的标签修改，且不涉及音频流本身。</p>`,
+      confirmText: "确认回滚",
+      danger: true,
+      handler: () => {
+        closeModal();
+        toast("回滚任务已创建 · 可在任务中心查看进度");
+        go("tasks");
+      }
+    });
+  });
+});
+
+$$("[data-open-cover]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    openModal({
+      kicker: "COVER / PICK",
+      title: "选择封面",
+      body: `
+        <div class="grid grid-cols-4 gap-2">
+          <button class="cover-pick aspect-square overflow-hidden border-2 border-ink"><img data-cover="city" alt="" class="h-full w-full object-cover"></button>
+          <button class="cover-pick aspect-square overflow-hidden border border-line"><img data-cover="prism" alt="" class="h-full w-full object-cover"></button>
+          <button class="cover-pick aspect-square overflow-hidden border border-line"><img data-cover="moon" alt="" class="h-full w-full object-cover"></button>
+          <button class="cover-pick aspect-square overflow-hidden border border-line"><img data-cover="loveless" alt="" class="h-full w-full object-cover"></button>
+        </div>
+        <div class="mt-4 flex items-center justify-between border-t border-line pt-3 font-mono text-[10px] text-ink/45">
+          <span>Cover Art Archive · 1200×1200</span><span>JPEG · 质量 90</span>
+        </div>`,
+      confirmText: "使用此封面",
+      handler: () => {
+        closeModal();
+        toast("封面已更新 · 将在下次写入时应用");
+      }
+    });
+
+    setTimeout(() => {
+      $$(".cover-pick").forEach(pick => {
+        pick.addEventListener("click", () => {
+          $$(".cover-pick").forEach(p => {
+            p.classList.remove("border-2", "border-ink");
+            p.classList.add("border", "border-line");
+          });
+          pick.classList.remove("border", "border-line");
+          pick.classList.add("border-2", "border-ink");
+        });
+      });
+      $$("#modalBody img[data-cover]").forEach(img => {
+        if (!img.src) img.src = coverArtUri(img.dataset.cover);
+      });
+    }, 0);
+  });
+});
+
+/* ---------- album cards / candidates / settings ---------- */
+$$(".album-card").forEach(card => {
+  card.tabIndex = 0;
+  card.classList.add("cursor-pointer");
+  card.addEventListener("click", e => {
+    if (!e.target.closest(".album-check")) go("album");
+  });
+  card.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") go("album");
+  });
+});
+
+$$("[data-select-candidate]").forEach(btn => {
+  btn.addEventListener("click", e => {
+    e.stopPropagation();
+    toast("已选择候选 · 变更计划已生成");
+    go("review");
+  });
+});
+
+$("#saveSettings").addEventListener("click", () => toast("设置已保存"));
+
+/* ---------- init ---------- */
+const initial = location.hash.replace("#", "");
+go(crumbs[initial] ? initial : "overview", false);
+updateBatch();
+</script>
+</body>
+</html>
