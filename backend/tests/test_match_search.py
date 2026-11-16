@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+
 import httpx
 import pytest
 
-from app.db.models import Album, LibraryRoot, Track
-from app.providers.base import CanonicalRelease, CanonicalTrack, ReleaseQuery
+from app.db.models import Album, LibraryRoot, ProviderCache, Track
+from app.providers.base import CanonicalRelease, CanonicalTrack, ReleaseQuery, cached
 from app.services import match as match_service
 from app.services.match import match_album
 from app.services.text import field_variants, to_simplified, to_traditional
@@ -126,6 +128,22 @@ def _make_album(db, *, album: str, artist: str) -> Album:
     )
     db.commit()
     return row
+
+
+@pytest.mark.asyncio
+async def test_cached_handles_concurrent_writes_for_same_key(db):
+    async def loader():
+        await asyncio.sleep(0.01)
+        return {"releases": [{"id": "mb-1"}]}
+
+    first, second = await asyncio.gather(
+        cached(db, "musicbrainz", "shared-key", 60, loader),
+        cached(db, "musicbrainz", "shared-key", 60, loader),
+    )
+
+    assert first == second == {"releases": [{"id": "mb-1"}]}
+    stored = db.get(ProviderCache, "shared-key")
+    assert stored is not None and stored.provider == "musicbrainz"
 
 
 @pytest.mark.asyncio

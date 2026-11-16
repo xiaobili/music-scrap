@@ -10,6 +10,7 @@ from typing import Any, Awaitable, Callable
 
 import httpx
 from pydantic import BaseModel, Field
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from ..db.models import ProviderCache
@@ -163,13 +164,21 @@ async def cached(
 
     payload = await loader()
     expires_at = now + timedelta(seconds=ttl_seconds)
-    if row is None:
-        row = ProviderCache(
-            key=key, provider=provider, payload_json=payload, expires_at=expires_at
-        )
-        session.add(row)
-    else:
-        row.payload_json = payload
-        row.expires_at = expires_at
+    # 同一检索的多个简繁查询变体会并发回同一发行版，先查后插的竞态会触发
+    # UNIQUE 冲突并使 Session 进入待回滚状态，因此改用原子 upsert 写入。
+    stmt = sqlite_insert(ProviderCache).values(
+        key=key, provider=provider, payload_json=payload, expires_at=expires_at
+    )
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[ProviderCache.key],
+        set_={
+            "payload_json": stmt.excluded.payload_json,
+            "expires_at": stmt.excluded.expires_at,
+        },
+    )
+    session.execute(stmt)
     session.commit()
+    if row is not None:
+        # expire_on_commit=False 会保留旧值，标记过期以便后续读取拿到刚写入的数据。
+        session.expire(row)
     return payload
