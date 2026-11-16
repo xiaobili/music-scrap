@@ -6,6 +6,13 @@ export interface Root {
   album_count: number
 }
 
+export interface CueTrack {
+  track_no: number
+  title: string | null
+  artist: string | null
+  duration_ms: number
+}
+
 export interface Album {
   id: number
   root_id: number
@@ -24,6 +31,7 @@ export interface Album {
   selected_cover_url?: string | null
   directory?: string | null
   tracks?: Track[]
+  cue_tracks?: CueTrack[]
   tags?: Record<string, string[]>
   track_tags?: Record<string, Record<string, string[]>>
   candidates_count?: number

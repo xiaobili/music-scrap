@@ -56,6 +56,7 @@ class Album(Base):
     album: Mapped[str | None] = mapped_column(String(512))
     year: Mapped[int | None] = mapped_column(Integer)
     track_count: Mapped[int] = mapped_column(Integer, default=0)
+    cue_tracks_json: Mapped[list[Any]] = mapped_column(JSON, default=list)
     duration_ms: Mapped[int] = mapped_column(Integer, default=0)
     mbid: Mapped[str | None] = mapped_column(String(64))
     confidence: Mapped[float] = mapped_column(Float, default=0.0)

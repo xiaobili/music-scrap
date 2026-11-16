@@ -87,6 +87,7 @@ def serialize_album(album: Album, *, detail: bool = False) -> dict[str, Any]:
             }
             for track in album.tracks
         ]
+        payload["cue_tracks"] = album.cue_tracks_json or []
         payload["directory"] = str(album_directory(album) or "") or None
     return payload
 

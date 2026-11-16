@@ -25,6 +25,8 @@ const covers = ref<{ provider: string; url: string; width?: number; height?: num
 
 const albumId = computed(() => Number(route.params.id))
 
+const cueTracks = computed(() => album.value?.cue_tracks || [])
+
 const tagRows = computed(() => {
   const tags = album.value?.tags || {}
   return [
@@ -227,20 +229,43 @@ onMounted(load)
         <div class="mt-10">
           <div class="flex items-end justify-between">
             <h2 class="font-display text-2xl">曲目</h2>
-            <span class="font-mono text-[10px] text-ink/40">{{ album.tracks?.length || 0 }} 个文件</span>
+            <span class="font-mono text-[10px] text-ink/40">
+              {{ cueTracks.length ? `${cueTracks.length} 曲 · 整轨 CUE` : `${album.tracks?.length || 0} 个文件` }}
+            </span>
           </div>
           <div class="mt-4 overflow-x-auto border-t border-line">
-            <table class="w-full min-w-[620px] text-left">
+            <table class="w-full min-w-[720px] text-left">
               <thead>
                 <tr class="border-b border-line/70">
                   <th class="eyebrow w-10 py-2 font-normal">#</th>
                   <th class="eyebrow py-2 font-normal">TITLE</th>
+                  <th class="eyebrow py-2 font-normal">ARTIST</th>
                   <th class="eyebrow py-2 font-normal">DURATION</th>
                   <th class="eyebrow py-2 font-normal">FORMAT</th>
                   <th class="eyebrow py-2 text-right font-normal">STATE</th>
                 </tr>
               </thead>
-              <tbody class="text-[13px]">
+              <tbody v-if="cueTracks.length" class="text-[13px]">
+                <tr
+                  v-for="track in cueTracks"
+                  :key="`cue-${track.track_no}`"
+                  class="border-b border-line/50"
+                >
+                  <td class="py-2.5 font-mono text-[11px] text-ink/35">
+                    {{ String(track.track_no || 0).padStart(2, '0') }}
+                  </td>
+                  <td class="py-2.5">{{ track.title || '—' }}</td>
+                  <td class="py-2.5 text-ink/60">{{ track.artist || album.artist || '—' }}</td>
+                  <td class="py-2.5 font-mono text-[11px] text-ink/45">
+                    {{ formatDuration(track.duration_ms) }}
+                  </td>
+                  <td class="py-2.5 font-mono text-[10px] text-ink/40">CUE</td>
+                  <td class="py-2.5 text-right">
+                    <span class="stamp text-ink/45">整轨</span>
+                  </td>
+                </tr>
+              </tbody>
+              <tbody v-else class="text-[13px]">
                 <tr
                   v-for="track in album.tracks"
                   :key="track.id"
@@ -252,6 +277,7 @@ onMounted(load)
                   <td class="py-2.5">
                     {{ album.track_tags?.[String(track.id)]?.TITLE?.[0] || track.title || '—' }}
                   </td>
+                  <td class="py-2.5 text-ink/60">{{ track.artist || album.artist || '—' }}</td>
                   <td class="py-2.5 font-mono text-[11px] text-ink/45">
                     {{ formatDuration(track.duration_ms) }}
                   </td>
@@ -271,6 +297,9 @@ onMounted(load)
               </tbody>
             </table>
           </div>
+          <p v-if="cueTracks.length && album.tracks?.length" class="mt-3 font-mono text-[9px] text-ink/35">
+            整轨文件 {{ album.tracks[0].format }} · {{ album.tracks[0].path }}
+          </p>
         </div>
 
         <div class="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5">

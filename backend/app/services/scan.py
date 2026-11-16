@@ -19,6 +19,7 @@ from ..tagio.mapping import AUDIO_EXTENSIONS
 CUE_TRACK_RE = re.compile(r"^\s*TRACK\s+(\d+)\s+AUDIO", re.IGNORECASE)
 CUE_TITLE_RE = re.compile(r'^\s*TITLE\s+"?([^"]+)"?', re.IGNORECASE)
 CUE_PERFORMER_RE = re.compile(r'^\s*PERFORMER\s+"?([^"]+)"?', re.IGNORECASE)
+CUE_INDEX_RE = re.compile(r"^\s*INDEX\s+01\s+(\d+):(\d+):(\d+)", re.IGNORECASE)
 YEAR_RE = re.compile(r"(19|20)\d{2}")
 TRACK_FILE_RE = re.compile(r"^\s*(\d{1,3})\s*[-._\s]+(.+)$")
 
@@ -77,7 +78,7 @@ def parse_track_filename(stem: str) -> tuple[int | None, str]:
     return None, stem.strip()
 
 
-def parse_cue(path: Path) -> list[dict[str, object]]:
+def parse_cue(path: Path, total_ms: int = 0) -> dict[str, object]:
     tracks: list[dict[str, object]] = []
     album_title: str | None = None
     album_artist: str | None = None
@@ -85,11 +86,16 @@ def parse_cue(path: Path) -> list[dict[str, object]]:
     try:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
-        return []
+        return {"title": None, "artist": None, "tracks": []}
     for line in lines:
         track_match = CUE_TRACK_RE.match(line)
         if track_match:
-            current = {"number": int(track_match.group(1)), "title": None, "artist": None}
+            current = {
+                "track_no": int(track_match.group(1)),
+                "title": None,
+                "artist": None,
+                "start_ms": None,
+            }
             tracks.append(current)
             continue
         title_match = CUE_TITLE_RE.match(line)
@@ -105,13 +111,37 @@ def parse_cue(path: Path) -> list[dict[str, object]]:
                 album_artist = performer_match.group(1).strip()
             else:
                 current["artist"] = performer_match.group(1).strip()
-    if album_title:
-        for track in tracks:
-            track.setdefault("album", album_title)
-    if album_artist:
-        for track in tracks:
-            track.setdefault("album_artist", album_artist)
-    return tracks
+            continue
+        index_match = CUE_INDEX_RE.match(line)
+        if index_match and current is not None:
+            minutes, seconds, frames = (int(group) for group in index_match.groups())
+            current["start_ms"] = minutes * 60_000 + seconds * 1000 + round(frames * 1000 / 75)
+
+    for index, track in enumerate(tracks):
+        if track["artist"] is None:
+            track["artist"] = album_artist
+        start = track.pop("start_ms")
+        if start is None:
+            track["duration_ms"] = 0
+            continue
+        next_start = tracks[index + 1]["start_ms"] if index + 1 < len(tracks) else None
+        end = next_start if next_start is not None else (total_ms or start)
+        track["duration_ms"] = max(int(end) - int(start), 0)
+    return {"title": album_title, "artist": album_artist, "tracks": tracks}
+
+
+def find_cue_files(directory: Path) -> list[Path]:
+    try:
+        return sorted(
+            (
+                path
+                for path in directory.iterdir()
+                if path.suffix.lower() == ".cue" and path.is_file()
+            ),
+            key=lambda path: path.name.lower(),
+        )
+    except OSError:
+        return []
 
 
 def _iter_audio_files(root: Path) -> list[tuple[Path, Path]]:
@@ -135,11 +165,15 @@ def _iter_audio_files(root: Path) -> list[tuple[Path, Path]]:
     return found
 
 
-def compute_file_sig(files: list[ScannedFile]) -> str:
-    payload = "\n".join(
-        sorted(f"{item.rel_path}|{item.size}|{item.mtime_ns}" for item in files)
-    )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+def compute_file_sig(files: list[ScannedFile], cue_files: list[Path] | None = None) -> str:
+    parts = [f"{item.rel_path}|{item.size}|{item.mtime_ns}" for item in files]
+    for cue in cue_files or []:
+        try:
+            stat = cue.stat()
+        except OSError:
+            continue
+        parts.append(f"cue:{cue.name}|{stat.st_size}|{stat.st_mtime_ns}")
+    return hashlib.sha256("\n".join(sorted(parts)).encode("utf-8")).hexdigest()
 
 
 def _first(tags: dict[str, list[str]], key: str) -> str | None:
@@ -210,7 +244,15 @@ def scan_root(
                     pass
             scanned.append(item)
 
-        signature = compute_file_sig(scanned)
+        cue_files = find_cue_files(directory)
+        total_duration_ms = sum(item.duration_ms for item in scanned)
+        cue = (
+            parse_cue(cue_files[0], total_duration_ms)
+            if cue_files
+            else {"title": None, "artist": None, "tracks": []}
+        )
+        cue_tracks = cue["tracks"]
+        signature = compute_file_sig(scanned, cue_files)
         album = session.scalar(
             select(Album).where(Album.root_id == root.id, Album.rel_path == rel_key)
         )
@@ -220,14 +262,17 @@ def scan_root(
                 progress(index, total, f"跳过未变目录 {rel_key}")
             continue
 
-        cue_files = sorted(directory.glob("*.cue"))
-        cue_tracks = parse_cue(cue_files[0]) if cue_files else []
         kind = _detect_kind(scanned, bool(cue_files))
         hints = parse_dir_hints(rel_dir)
 
         first_tags = scanned[0].tags if scanned else {}
-        album_artist = _first(first_tags, "ALBUMARTIST") or _first(first_tags, "ARTIST") or hints.artist
-        album_title = _first(first_tags, "ALBUM") or hints.album
+        album_artist = (
+            _first(first_tags, "ALBUMARTIST")
+            or _first(first_tags, "ARTIST")
+            or cue["artist"]
+            or hints.artist
+        )
+        album_title = _first(first_tags, "ALBUM") or cue["title"] or hints.album
         date_value = _first(first_tags, "DATE") or ""
         year = int(date_value[:4]) if date_value[:4].isdigit() else hints.year
 
@@ -241,8 +286,9 @@ def scan_root(
         album.album = album_title
         album.year = year
         album.file_sig = signature
-        album.track_count = len(scanned)
-        album.duration_ms = sum(item.duration_ms for item in scanned)
+        album.cue_tracks_json = cue_tracks if kind == "whole" else []
+        album.track_count = len(cue_tracks) if album.cue_tracks_json else len(scanned)
+        album.duration_ms = total_duration_ms
 
         existing_tracks = {track.path: track for track in album.tracks}
         keep_paths: set[str] = set()
@@ -265,14 +311,6 @@ def scan_root(
         for path, track in existing_tracks.items():
             if path not in keep_paths:
                 session.delete(track)
-
-        if kind == "whole" and cue_tracks:
-            whole_track = next(
-                (track for track in album.tracks if track.path in keep_paths), None
-            )
-            if whole_track is not None and cue_tracks:
-                whole_track.title = album.album
-                whole_track.track_no = whole_track.track_no or 1
 
         result.albums += 1
         result.parsed_files += len(scanned)
